@@ -12,7 +12,10 @@ import SwiftData
 struct SwiftCleanerApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self,
+       //     FileNode.self,
+       //     Project.self,
+       //     ClassTree.self,
+       //     ClassElement.self
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
@@ -26,7 +29,12 @@ struct SwiftCleanerApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .onAppear(){
+                    guard let appSupportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).last else { return }
+                    print(appSupportDir.path())
+                }
         }
+        
         .modelContainer(sharedModelContainer)
     }
 }

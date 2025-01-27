@@ -6,6 +6,13 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		48B75B112D412B3F0082A57D /* SwiftBasicFormat in Frameworks */ = {isa = PBXBuildFile; productRef = 48B75B102D412B3F0082A57D /* SwiftBasicFormat */; };
+		48B75B132D412B3F0082A57D /* SwiftOperators in Frameworks */ = {isa = PBXBuildFile; productRef = 48B75B122D412B3F0082A57D /* SwiftOperators */; };
+		48B75B152D412B3F0082A57D /* SwiftParser in Frameworks */ = {isa = PBXBuildFile; productRef = 48B75B142D412B3F0082A57D /* SwiftParser */; };
+		48B75B172D412B3F0082A57D /* SwiftSyntax in Frameworks */ = {isa = PBXBuildFile; productRef = 48B75B162D412B3F0082A57D /* SwiftSyntax */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		48B75ADC2D40D5450082A57D /* SwiftCleaner.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SwiftCleaner.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -23,6 +30,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				48B75B132D412B3F0082A57D /* SwiftOperators in Frameworks */,
+				48B75B152D412B3F0082A57D /* SwiftParser in Frameworks */,
+				48B75B112D412B3F0082A57D /* SwiftBasicFormat in Frameworks */,
+				48B75B172D412B3F0082A57D /* SwiftSyntax in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,6 +76,10 @@
 			);
 			name = SwiftCleaner;
 			packageProductDependencies = (
+				48B75B102D412B3F0082A57D /* SwiftBasicFormat */,
+				48B75B122D412B3F0082A57D /* SwiftOperators */,
+				48B75B142D412B3F0082A57D /* SwiftParser */,
+				48B75B162D412B3F0082A57D /* SwiftSyntax */,
 			);
 			productName = SwiftCleaner;
 			productReference = 48B75ADC2D40D5450082A57D /* SwiftCleaner.app */;
@@ -94,6 +109,9 @@
 			);
 			mainGroup = 48B75AD32D40D5450082A57D;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				48B75B0F2D412B3F0082A57D /* XCRemoteSwiftPackageReference "swift-syntax" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 48B75ADD2D40D5450082A57D /* Products */;
 			projectDirPath = "";
@@ -321,6 +339,40 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		48B75B0F2D412B3F0082A57D /* XCRemoteSwiftPackageReference "swift-syntax" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/swiftlang/swift-syntax";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 600.0.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		48B75B102D412B3F0082A57D /* SwiftBasicFormat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 48B75B0F2D412B3F0082A57D /* XCRemoteSwiftPackageReference "swift-syntax" */;
+			productName = SwiftBasicFormat;
+		};
+		48B75B122D412B3F0082A57D /* SwiftOperators */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 48B75B0F2D412B3F0082A57D /* XCRemoteSwiftPackageReference "swift-syntax" */;
+			productName = SwiftOperators;
+		};
+		48B75B142D412B3F0082A57D /* SwiftParser */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 48B75B0F2D412B3F0082A57D /* XCRemoteSwiftPackageReference "swift-syntax" */;
+			productName = SwiftParser;
+		};
+		48B75B162D412B3F0082A57D /* SwiftSyntax */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 48B75B0F2D412B3F0082A57D /* XCRemoteSwiftPackageReference "swift-syntax" */;
+			productName = SwiftSyntax;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 48B75AD42D40D5450082A57D /* Project object */;
 }
