@@ -8,14 +8,37 @@
 import SwiftUI
 
 struct ContentView: View {
+    @StateObject private var project: Project = Project.shared
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        SelectFolderView(project: project)
+        
+        HStack{
+            if let node = project.rootNode{
+                FileTreeView(node: node)
+                    .padding([.leading, .bottom])
+            }else{
+                if project.path != nil{
+                    Button {
+                        project.findFiles()
+                    } label: {
+                        Text("Find Files")
+                    }
+                }
+            }
+            if !project.classes.isEmpty{
+                ClassTreeView( project: project)
+                    .padding([.leading, .bottom, .trailing])
+            }else{
+                Button {
+                    project.findAllCalls()
+                } label: {
+                    Text("Find Classes und so")
+                }
+            }
+            
         }
-        .padding()
+        Text("classes: \(project.classes.count)")
+        Text("calls: \(project.calls.count)")
     }
 }
 
