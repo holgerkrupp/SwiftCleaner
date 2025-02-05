@@ -9,10 +9,11 @@ import Foundation
 
 
 enum ElementType: String, Codable {
-    case clas
+    case `class`
     case method
     case property
     case closure
+    case `extension`
 }
 
 class ClassElement: Identifiable, ObservableObject {
@@ -34,18 +35,45 @@ class ClassElement: Identifiable, ObservableObject {
         self.file = file
         self.line = line
     }
+    
+    var description: String{
+        var temp = name
+        
+        let parameterlist = paramaters?.joined(separator: ", ") ?? ""
+        temp.append("(")
+        temp.append(parameterlist)
+        temp.append(")")
+        return temp
+        
+    }
 }
 
 class Call: Identifiable, ObservableObject{
             
     var element: ClassElement?
+    var className: String?
+    var paramaters: [String]?
     var name: String
     var file: URL           // File where the element is called
     var line: Int
     
+    var description: String{
+        var temp = name
+        
+        let parameterlist = paramaters?.joined(separator: ", ") ?? ""
+        temp.append("(")
+        temp.append(parameterlist)
+        temp.append(")")
+        return temp
+        
+    }
     
-    init(name: String, file: URL, line: Int, element: ClassElement? = nil) {
+    
+    init(name: String, file: URL, line: Int, element: ClassElement? = nil, className: String? = nil, paramaters: [String]? = nil) {
         self.element = element
+        self.className = className
+        self.paramaters = paramaters
+
         self.name = name
         self.file = file
         self.line = line

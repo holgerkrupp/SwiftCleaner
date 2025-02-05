@@ -28,7 +28,7 @@ struct SelectFolderView: View {
         
         if panel.runModal() == .OK, let folder = panel.url {
             project.path = folder
-            
+            project.analyzeProject()
 
         }
     }

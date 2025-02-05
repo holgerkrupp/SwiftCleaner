@@ -8,37 +8,71 @@
 import SwiftUI
 
 struct ContentView: View {
+    
+    enum SubViews:Int, Codable, CaseIterable, Identifiable, CustomStringConvertible {
+        var id: Self { self }
+        
+        var description: String {
+            switch self {
+            case .files:
+                "File Tree"
+            case .classes:
+                "Class Tree"
+            }
+        }
+        
+        case files, classes
+    }
+    
+    
+    
     @StateObject private var project: Project = Project.shared
+    @State private var viewDetail: SubViews = .files
     var body: some View {
         SelectFolderView(project: project)
-        
-        HStack{
-            if let node = project.rootNode{
-                FileTreeView(node: node)
-                    .padding([.leading, .bottom])
-            }else{
-                if project.path != nil{
-                    Button {
-                        project.findFiles()
-                    } label: {
-                        Text("Find Files")
-                    }
+            
+            
+        if project.rootNode != nil{
+            Picker("", selection: $viewDetail) {
+                
+                ForEach(SubViews.allCases) { option in
+                    
+                    Text(String(describing: option))
+                        .tag(option)
+                    
                 }
             }
-            if !project.classes.isEmpty{
-                ClassTreeView( project: project)
-                    .padding([.leading, .bottom, .trailing])
-            }else{
-                Button {
-                    project.findAllCalls()
-                } label: {
-                    Text("Find Classes und so")
+            .pickerStyle(.segmented)
+            
+            switch viewDetail{
+                
+            case .files:
+                if let node = project.rootNode{
+                    FileTreeView(node: node)
+                        .padding([.leading, .bottom])
+                }else{
+                    if project.path != nil{
+                        Button {
+                            project.findFiles()
+                        } label: {
+                            Text("Find Files")
+                        }
+                    }
+                }
+            case .classes:
+                if !project.classes.isEmpty{
+                    ClassTreeView( project: project)
+                        .padding([.leading, .bottom, .trailing])
+                }else{
+                    Button {
+                        project.findAllCalls()
+                    } label: {
+                        Text("Find Classes und so")
+                    }
                 }
             }
             
         }
-        Text("classes: \(project.classes.count)")
-        Text("calls: \(project.calls.count)")
     }
 }
 

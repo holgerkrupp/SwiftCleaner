@@ -28,6 +28,17 @@ class Project: ObservableObject{
         }
     }
     
+    func analyzeProject(){
+        rootNode = nil
+     
+        if let path{
+            rootNode = buildFileTree(at: path)
+        }
+        if let rootNode {
+            findAllCalls()
+        }
+    }
+    
     
     private func buildFileTree(at directory: URL, depth: Int = 0) -> FileNode? {
         
@@ -125,6 +136,7 @@ class Project: ObservableObject{
     }
     
     func findAllCalls(){
+        classes.removeAll()
         calls.removeAll()
         visitedNodes.removeAll()
         

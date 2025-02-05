@@ -23,41 +23,64 @@ struct ClassTreeView: View {
 struct ClassNodeView: View {
     @State var node: ClassElement
     var calls: [Call]
+    var parent: ClassElement? = nil
     
     var body: some View {
         if !node.children.isEmpty {
             DisclosureGroup(node.name) {
                 ForEach(sortedNodes(node.children), id: \.id) { child in
-                    ClassNodeView(node: child, calls: calls)
+                    ClassNodeView(node: child, calls: calls, parent: node)
                         .padding(.leading, 20)
                 }
             }
             .fontWeight(.bold)
         } else {
-            let callCount = calls.filter { $0.name == node.name }.count
             
-            HStack {
+            
+            let matchingCalls = calls.filter { $0.name == node.name && $0.paramaters?.count == node.paramaters?.count}
+            let callCount = matchingCalls.count
+            HStack(alignment: .top, content: {
                 Label(node.name, systemImage: systemImage(for: node.type))
                     .foregroundStyle(.primary)
+                    .help("\(node.file.standardizedFileURL.absoluteString) Line \(node.line)")
                 
                 if node.type == .method || node.type == .closure {
                     Text(node.signature ?? "")
-                        .font(.system(.body, design: .monospaced))
+                        .font(.system(.footnote, design: .monospaced))
                         .foregroundStyle(.secondary)
+                        .fontWeight(.light)
                 }
-                
-               
+                Spacer()
+                if callCount > 0{
+                    DisclosureGroup("(\(callCount) calls)") {
+                        VStack(alignment: .leading) {
+                            ForEach(matchingCalls, id: \.id ) { call in
+                                HStack{
+                                    Text("\(call.className ?? "-") \(call.description)")
+                                        .fontWeight(.light)
+                                        .help("\(call.file.standardizedFileURL.absoluteString) Line \(call.line)")
+                                    Text("\(call.line) \(call.file.lastPathComponent) ")
+                                        .foregroundStyle(.black)
+                                        .fontWeight(.light)
+                                }
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                    }
+                    .foregroundStyle(callCount > 0 ? .blue : .red)
+                    .fontWeight(.bold)
+                }else{
                     Text("(\(callCount) calls)")
                         .foregroundStyle(callCount > 0 ? .blue : .red)
                         .fontWeight(.bold)
+                }
+            })
+            
                 
-                
-                Spacer()
-                Text("Line \(node.line)")
-                    .foregroundStyle(.secondary)
             }
         }
-    }
+    
     
     private func sortedNodes(_ nodes: [ClassElement]) -> [ClassElement] {
         nodes.sorted { elementPriority($0.type) < elementPriority($1.type) }
@@ -78,10 +101,12 @@ struct ClassNodeView: View {
     
     private func systemImage(for type: ElementType) -> String {
         switch type {
-        case .clas: return "folder"
+        case .class: return "folder"
         case .method: return "function"
         case .property: return "circle.fill"
         case .closure: return "curlybraces"
+        case .extension: return "folder"
+    
         }
     }
 }

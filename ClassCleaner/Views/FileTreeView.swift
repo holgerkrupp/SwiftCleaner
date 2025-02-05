@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct FileTreeView: View {
-    @State var node: FileNode
+    @ObservedObject var node: FileNode
 
     var body: some View {
         

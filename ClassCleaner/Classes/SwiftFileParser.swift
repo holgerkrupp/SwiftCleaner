@@ -9,6 +9,8 @@ class SwiftFileParser: SyntaxVisitor {
     var fileURL: URL
     var classes: [ClassElement] = []
     private var classStack: [ClassElement] = []
+    private var instanceTypes: [String: String] = [:] // Maps instance name -> Class type
+    private var classMethods: [String: String] = [:]
     var calls: [Call] = []
     
     let sourceLocationConverter: SourceLocationConverter
@@ -30,36 +32,87 @@ class SwiftFileParser: SyntaxVisitor {
     }
     
     override func visit(_ node: FunctionCallExprSyntax) -> SyntaxVisitorContinueKind {
-        // Check if the called expression is a member access (e.g., gm.addTo2)
-        let functionName: String
+        var functionName: String = "Unknown"
+        var instanceName: String? = nil
+        var classType: String? = nil
+        var parameters: [String] = []
         if let memberAccessExpr = node.calledExpression.as(MemberAccessExprSyntax.self) {
-            // Extract the function name from the declName
             functionName = memberAccessExpr.declName.baseName.text
-        } else if let awaitExpr = node.calledExpression.as(AwaitExprSyntax.self) {
-            // If it's wrapped in await, extract the function name from the inner expression
-            if let identifierExpr = awaitExpr.expression.as(DeclReferenceExprSyntax.self) {
-                functionName = identifierExpr.baseName.text
-            } else {
-                functionName = "Unknown"
+            
+            
+            
+            if let baseExpr = memberAccessExpr.base {
+                if let identifier = baseExpr.as(IdentifierExprSyntax.self) {
+                    // Simple case: Direct instance method call, like `gm.someFunction()`
+                    instanceName = identifier.identifier.text
+                    classType = instanceTypes[instanceName!] ?? classMethods[functionName] ?? classStack.last?.name// Lookup
+                } else if let baseMemberAccess = baseExpr.as(MemberAccessExprSyntax.self) {
+                    // Case for `GameManager.shared.checkGameObjectExists(...)`
+                    if let baseIdentifier = baseMemberAccess.base?.as(IdentifierExprSyntax.self) {
+                        classType = baseIdentifier.identifier.text  ?? classStack.last?.name// "GameManager"
+                    }
+                }
             }
-        } else if let identifierExpr = node.calledExpression.as(DeclReferenceExprSyntax.self) {
-            // Regular function call
-            functionName = identifierExpr.baseName.text
-        } else {
-            functionName = "Unknown"
+        } else if let identifierExpr = node.calledExpression.as(IdentifierExprSyntax.self) {
+            functionName = identifierExpr.identifier.text
+            classType = classMethods[functionName]  ?? classStack.last?.name// Lookup standalone function
         }
+            
         
-        // Capture the line number
+         
+        
+        for argument in node.arguments {
+           
+          
+                let argumentExpression = argument.expression
+            if let identifier = argumentExpression.as(DeclReferenceExprSyntax.self) {
+                print("identifier: \(identifier.baseName.text)")
+                parameters.append(identifier.baseName.text)  // Extract identifier name
+            } else {
+                print("argumentExpression: \(argumentExpression.description)")
+                parameters.append(argumentExpression.description)
+            }
+               
+            
+        }
+       
         let line = sourceLocationConverter.location(for: node.positionAfterSkippingLeadingTrivia).line
         
-        // Append the call to the list
-        calls.append(Call(name: functionName, file: fileURL, line: line))
-        
-        print("Recorded function call: \(functionName) at line \(line) of file \(fileURL)")
-        
+        // print("📞 Function call detected: \(functionName) (Instance: \(instanceName ?? "global"), Class: \(classType ?? "Unknown"), Line: \(line))")
+        calls.append(Call(name: functionName, file: fileURL, line: line, className: classType, paramaters: parameters))
         return .visitChildren
     }
 
+    override func visit(_ node: ExtensionDeclSyntax) -> SyntaxVisitorContinueKind {
+        let location = sourceLocationConverter.location(for: node.positionAfterSkippingLeadingTrivia)
+        
+        if let extendedType = node.extendedType.as(IdentifierTypeSyntax.self)?.name.text {
+            // Create a temporary ClassElement for the extension
+            let extensionElement = ClassElement(type: .extension, name: extendedType, file: fileURL, line: location.line)
+            classStack.append(extensionElement)
+            // print("🛠 Found extension for class: \(extendedType) at line \(location.line)")
+        }
+        
+        return .visitChildren
+    }
+    override func visitPost(_ node: ExtensionDeclSyntax) {
+        if let last = classStack.last, last.type == .extension {
+            // print("✅ Finished processing extension for class: \(last.name)")
+            classStack.removeLast()
+        }
+    }
+    func findMatchingFunction(name: String, instance: String?) -> ClassElement? {
+        if let instance = instance {
+            // Look for the class in `classes`
+            if let classElement = classes.first(where: { $0.name == instance }) {
+                return classElement.children.first { $0.name == name }
+            }
+        } else {
+            // Look for a standalone function
+            return classes.flatMap { $0.children }.first { $0.name == name }
+        }
+        return nil
+    }
     override func visit(_ node: DeclReferenceExprSyntax) -> SyntaxVisitorContinueKind {
         
         let calledFunction = node.baseName.description
@@ -71,7 +124,7 @@ class SwiftFileParser: SyntaxVisitor {
         return .visitChildren
     }
     override func visit(_ node: MemberAccessExprSyntax) -> SyntaxVisitorContinueKind {
-      //  print("visited call: \(node.description)")
+      //  // print("visited call: \(node.description)")
         let calledFunction = node.description
         let line = sourceLocationConverter.location(for: node.positionAfterSkippingLeadingTrivia).line
         
@@ -80,7 +133,7 @@ class SwiftFileParser: SyntaxVisitor {
         return .visitChildren
     }
     override func visit(_ node: SubscriptCallExprSyntax) -> SyntaxVisitorContinueKind {
-     //   print("visited call: \(node.description)")
+     //   // print("visited call: \(node.description)")
         if let calledFunction = node.calledExpression.as(SubscriptCallExprSyntax.self)?.description{
             let line = sourceLocationConverter.location(for: node.positionAfterSkippingLeadingTrivia).line
             
@@ -88,35 +141,31 @@ class SwiftFileParser: SyntaxVisitor {
         }
         return .visitChildren
     }
-    
     func getFunctionCalls() ->[Call] {
-    //    print("found \(calls.count.description) function Calls")
+    //    // print("found \(calls.count.description) function Calls")
         return calls
     }
-    
     override func visit(_ node: ClassDeclSyntax) -> SyntaxVisitorContinueKind {
         
-    //   print("visited class: \(node.name.text)")
+    //   // print("visited class: \(node.name.text)")
         
         let location = sourceLocationConverter.location(for: node.positionAfterSkippingLeadingTrivia)
         let className = node.name.text
         
-        let newClass = ClassElement(type: .clas, name: className, file: fileURL, line: location.line)
+        let newClass = ClassElement(type: .class, name: className, file: fileURL, line: location.line)
         classStack.append(newClass)
        
         return .visitChildren
     }
-    
     override func visitPost(_ node: ClassDeclSyntax) {
         // When leaving the class, pop it from the stack and store it
         if let lastClass = classStack.popLast() {
             classes.append(lastClass)
         }
     }
-    
     override func visit(_ node: StructDeclSyntax) -> SyntaxVisitorContinueKind {
         
-    //    print("visited: \(node.name.text)")
+    //    // print("visited: \(node.name.text)")
         
         let location = sourceLocationConverter.location(for: node.positionAfterSkippingLeadingTrivia)
         let structName = node.name.text
@@ -125,44 +174,84 @@ class SwiftFileParser: SyntaxVisitor {
         return .visitChildren
     }
     override func visit(_ node: FunctionDeclSyntax) -> SyntaxVisitorContinueKind {
-        
-       
-        
+        let functionName = node.name.text
         let location = sourceLocationConverter.location(for: node.positionAfterSkippingLeadingTrivia)
-        let methodName = node.name.text
-        let signature = node.signature.parameterClause.description
         
-        let newElement = ClassElement(type: .method, name: methodName, signature: signature, file: fileURL, line: location.line)
-        append(newElement: newElement)
-
-    
+        // Retrieve the current class or extension context
+        let parentClass = classStack.last?.name ?? "Unknown"
+        
+        // Store the function name with its corresponding class
+        classMethods[functionName] = parentClass
+        
+        var parameterNames: [String] = []
+        for parameter in node.signature.parameterClause.parameters {
+           parameterNames.append(parameter.firstName.text)
+            
+        }
+        
+        let newElement = ClassElement(
+            type: .method,
+            name: functionName,
+            paramaters: parameterNames,
+            signature: node.signature.description,
+            file: fileURL,
+            line: location.line
+        )
+        
+        if let extensionElement = classStack.last, extensionElement.type == .extension {
+            extensionElement.children.append(newElement)
+            // print("🔗 Added method '\(functionName)' to extension of class '\(parentClass)'")
+        } else {
+            append(newElement: newElement)
+            // print("🔗 Added method '\(functionName)' to class '\(parentClass)'")
+        }
         
         return .visitChildren
     }
+
+
     
     override func visit(_ node: VariableDeclSyntax) -> SyntaxVisitorContinueKind {
-        
-        
-     //   print("visited Variable: \(node.description)")
-        
-        
         let location = sourceLocationConverter.location(for: node.positionAfterSkippingLeadingTrivia)
+        
         for binding in node.bindings {
             if let identifier = binding.pattern.as(IdentifierPatternSyntax.self) {
                 let propertyName = identifier.identifier.text
                 
-           
-                let newElement = ClassElement(type: .property, name: propertyName, file: fileURL, line: location.line)
-                append(newElement: newElement)
-             
+                // 🛠 Check if this variable is assigned a class instance (e.g., `let gm = GameManager()`)
+                if let initializer = binding.initializer?.value {
+                    if let functionCall = initializer.as(FunctionCallExprSyntax.self),
+                       let typeName = functionCall.calledExpression.as(IdentifierExprSyntax.self)?.identifier.text {
+                        
+                        // 🔗 Store instance name → Class Type (direct instantiation)
+                        instanceTypes[propertyName] = typeName
+                        // print("🔗 Instance '\(propertyName)' → Class '\(typeName)' (Line \(location.line))")
+                        
+                    }
+                    // 🛠 Detect shared instances (e.g., `let gm = GameManager.shared`)
+                    else if let memberAccess = initializer.as(MemberAccessExprSyntax.self),
+                            let baseName = memberAccess.base?.as(IdentifierExprSyntax.self)?.identifier.text {
+                        
+                        // Assume `baseName` is the class name
+                        instanceTypes[propertyName] = baseName
+                        // print("🔗 Shared Instance '\(propertyName)' → Class '\(baseName)' (Line \(location.line))")
+                    }
+                } else {
+                    // ✅ Regular property inside a class
+                    let newElement = ClassElement(type: .property, name: propertyName, file: fileURL, line: location.line)
+                    append(newElement: newElement)
+                }
             }
         }
+        
+        // print("📋 All instances: \(instanceTypes)")
         return .visitChildren
     }
+
     
     override func visit(_ node: ClosureExprSyntax) -> SyntaxVisitorContinueKind {
         
-     //   print("visited: Closure")
+     //   // print("visited: Closure")
         
         
         let name = "Closure"

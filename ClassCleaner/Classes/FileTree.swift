@@ -32,7 +32,7 @@ class FileNode: Identifiable, ObservableObject {
     var depth: Int // Depth in the tree
     
     var fileType: FileType {
-        print(url.absoluteString)
+        
         if url.pathExtension.isEmpty {
             return FileType.other
         }else{
