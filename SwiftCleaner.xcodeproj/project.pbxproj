@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		481CE8EC2D563CC10018B9A7 /* AppIcon.afdesign in Resources */ = {isa = PBXBuildFile; fileRef = 481CE8EB2D563CC10018B9A7 /* AppIcon.afdesign */; };
 		4851BC372D5211D00081CFA1 /* SwiftBasicFormat in Frameworks */ = {isa = PBXBuildFile; productRef = 4851BC362D5211D00081CFA1 /* SwiftBasicFormat */; };
 		4851BC392D5211D00081CFA1 /* SwiftOperators in Frameworks */ = {isa = PBXBuildFile; productRef = 4851BC382D5211D00081CFA1 /* SwiftOperators */; };
 		4851BC3B2D5211D00081CFA1 /* SwiftParser in Frameworks */ = {isa = PBXBuildFile; productRef = 4851BC3A2D5211D00081CFA1 /* SwiftParser */; };
@@ -15,6 +16,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		481CE8EB2D563CC10018B9A7 /* AppIcon.afdesign */ = {isa = PBXFileReference; lastKnownFileType = file; path = AppIcon.afdesign; sourceTree = "<group>"; };
 		4851BC0F2D51EF360081CFA1 /* SwiftCleaner.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SwiftCleaner.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -45,6 +47,7 @@
 		4851BC062D51EF360081CFA1 = {
 			isa = PBXGroup;
 			children = (
+				481CE8EB2D563CC10018B9A7 /* AppIcon.afdesign */,
 				4851BC112D51EF360081CFA1 /* ClassCleaner */,
 				4851BC352D5211D00081CFA1 /* Frameworks */,
 				4851BC102D51EF360081CFA1 /* Products */,
@@ -139,6 +142,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				481CE8EC2D563CC10018B9A7 /* AppIcon.afdesign in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -293,7 +297,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = de.holgerkrupp.SwiftCleaner;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -321,7 +325,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = de.holgerkrupp.SwiftCleaner;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
