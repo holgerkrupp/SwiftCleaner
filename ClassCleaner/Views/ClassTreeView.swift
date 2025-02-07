@@ -8,6 +8,8 @@ struct ClassTreeView: View {
             LazyVStack(alignment: .leading) {
                 ForEach(sortedNodes(project.classes), id: \.id) { node in
                     ClassNodeView(node: node, calls: project.calls)
+                
+
                 }
             }
         }
@@ -27,55 +29,87 @@ struct ClassNodeView: View {
     
     var body: some View {
         if !node.children.isEmpty {
-            DisclosureGroup(node.name) {
-                ForEach(sortedNodes(node.children), id: \.id) { child in
-                    ClassNodeView(node: child, calls: calls, parent: node)
-                        .padding(.leading, 20)
+            HStack(alignment: .top) {
+          
+                DisclosureGroup(node.name) {
+                    ForEach(sortedNodes(node.children), id: \.id) { child in
+                        HStack{
+                            ClassNodeView(node: child, calls: calls, parent: node)
+                                .padding(.leading, 20)
+                                .onTapGesture {
+                                    NSWorkspace.shared.open(node.file)
+                                }
+                            
+                            
+                        }
+                    }
                 }
+                .fontWeight(.bold)
             }
-            .fontWeight(.bold)
+           
         } else {
             
             
             let matchingCalls = calls.filter { $0.name == node.name && $0.paramaters?.count == node.paramaters?.count}
             let callCount = matchingCalls.count
-            HStack(alignment: .top, content: {
-                Label(node.name, systemImage: systemImage(for: node.type))
-                    .foregroundStyle(.primary)
-                    .help("\(node.file.standardizedFileURL.absoluteString) Line \(node.line)")
-                
-                if node.type == .method || node.type == .closure {
-                    Text(node.signature ?? "")
+            HStack(alignment: .top){
+                VStack(alignment: .leading){
+                    HStack{
+                        
+                        Label(node.name, systemImage: systemImage(for: node.type))
+                            .foregroundStyle(.primary)
+                            .help("\(node.file.standardizedFileURL.absoluteString) Line \(node.line)")
+                        
+                        if node.type == .method || node.type == .closure {
+                            Text(node.signature ?? "")
+                                .font(.system(.footnote, design: .monospaced))
+                                .foregroundStyle(.secondary)
+                                .fontWeight(.light)
+                        }
+                    }
+                    Text("\(node.location)")
                         .font(.system(.footnote, design: .monospaced))
                         .foregroundStyle(.secondary)
                         .fontWeight(.light)
                 }
+                .onTapGesture {
+                    NSWorkspace.shared.open(node.file)
+                }
                 Spacer()
                 if callCount > 0{
                     DisclosureGroup("(\(callCount) calls)") {
-                        VStack(alignment: .leading) {
+                        VStack(alignment: .trailing) {
                             ForEach(matchingCalls, id: \.id ) { call in
                                 HStack{
                                     Text("\(call.className ?? "-") \(call.description)")
                                         .fontWeight(.light)
                                         .help("\(call.file.standardizedFileURL.absoluteString) Line \(call.line)")
-                                    Text("\(call.line) \(call.file.lastPathComponent) ")
-                                        .foregroundStyle(.black)
+                                    Text("\(call.file.lastPathComponent) \(call.line)")
+                                        .font(.system(.footnote, design: .monospaced))
+                                        .foregroundStyle(.secondary)
                                         .fontWeight(.light)
+                                }
+                               
+                                .onTapGesture {
+                                    NSWorkspace.shared.open(call.file)
                                 }
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
 
                     }
+                    .padding(.leading, 40)
                     .foregroundStyle(callCount > 0 ? .blue : .red)
                     .fontWeight(.bold)
                 }else{
-                    Text("(\(callCount) calls)")
+                    Text("not used")
                         .foregroundStyle(callCount > 0 ? .blue : .red)
                         .fontWeight(.bold)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.leading, 40)
                 }
-            })
+            }
+            
             
                 
             }

@@ -25,15 +25,17 @@ class ClassElement: Identifiable, ObservableObject {
     var signature: String?     // Optional, used for methods or closures
     var file: URL           // File where the element is declared
     var line: Int              // Line number in the file
+    var endline: Int?             // Line number in the file
     @Published var children: [ClassElement] = []// Unified list of elements (methods, properties, closures)
     
-    init(type: ElementType, name: String, paramaters: [String]? = nil, signature: String? = nil, file: URL, line: Int) {
+    init(type: ElementType, name: String, paramaters: [String]? = nil, signature: String? = nil, file: URL, line: Int, endline: Int? = nil) {
         self.type = type
         self.name = name
         self.paramaters = paramaters
         self.signature = signature
         self.file = file
         self.line = line
+        self.endline = endline
     }
     
     var description: String{
@@ -44,6 +46,15 @@ class ClassElement: Identifiable, ObservableObject {
         temp.append(parameterlist)
         temp.append(")")
         return temp
+        
+    }
+    
+    var location: String{
+        if let endline{
+            return ("\(file.lastPathComponent) Line \(line) - \(endline)")
+        }else{
+            return ("\(file.lastPathComponent) Line \(line)")
+        }
         
     }
 }

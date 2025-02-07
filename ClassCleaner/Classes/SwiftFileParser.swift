@@ -173,9 +173,52 @@ class SwiftFileParser: SyntaxVisitor {
         
         return .visitChildren
     }
+    
+    
+    
+    
+    
+    override func visit(_ node: VariableDeclSyntax) -> SyntaxVisitorContinueKind {
+        let location = sourceLocationConverter.location(for: node.positionAfterSkippingLeadingTrivia)
+        
+        for binding in node.bindings {
+            if let identifier = binding.pattern.as(IdentifierPatternSyntax.self) {
+                let propertyName = identifier.identifier.text
+                var inferredType = ""
+                
+                // Case 1: Type annotation (explicit)
+                if let typeAnnotation = binding.typeAnnotation?.type {
+                    inferredType = typeAnnotation.description
+                }
+                
+                // Case 2: Singleton / Factory (e.g., GameManager.shared)
+                if let initializer = binding.initializer?.value.as(MemberAccessExprSyntax.self) {
+                    if let base = initializer.base?.as(IdentifierExprSyntax.self) {
+                        inferredType = instanceTypes[base.identifier.text] ?? ""
+                    }
+                }
+                
+                // Case 3: Direct initializer type inference (e.g., let x = SomeClass())
+                if let initializer = binding.initializer?.value.as(FunctionCallExprSyntax.self) {
+                    if let typeName = initializer.calledExpression.as(IdentifierExprSyntax.self)?.identifier.text {
+                        inferredType = typeName
+                    }
+                }
+                
+                // Normalize type
+                print("🏛 Variable: \(propertyName) -> \(inferredType) (Line: \(location.line) in \(classStack.last?.name ?? "global level")")
+
+            }
+        }
+        return .visitChildren
+    }
+    
+    
+    
     override func visit(_ node: FunctionDeclSyntax) -> SyntaxVisitorContinueKind {
         let functionName = node.name.text
         let location = sourceLocationConverter.location(for: node.positionAfterSkippingLeadingTrivia)
+        let end = sourceLocationConverter.location(for: node.endPosition)
         
         // Retrieve the current class or extension context
         let parentClass = classStack.last?.name ?? "Unknown"
@@ -195,7 +238,8 @@ class SwiftFileParser: SyntaxVisitor {
             paramaters: parameterNames,
             signature: node.signature.description,
             file: fileURL,
-            line: location.line
+            line: location.line,
+            endline: end.line
         )
         
         if let extensionElement = classStack.last, extensionElement.type == .extension {
@@ -210,7 +254,7 @@ class SwiftFileParser: SyntaxVisitor {
     }
 
 
-    
+    /*
     override func visit(_ node: VariableDeclSyntax) -> SyntaxVisitorContinueKind {
         let location = sourceLocationConverter.location(for: node.positionAfterSkippingLeadingTrivia)
         
@@ -248,7 +292,7 @@ class SwiftFileParser: SyntaxVisitor {
         return .visitChildren
     }
 
-    
+    */
     override func visit(_ node: ClosureExprSyntax) -> SyntaxVisitorContinueKind {
         
      //   // print("visited: Closure")

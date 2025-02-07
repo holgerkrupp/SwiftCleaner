@@ -27,55 +27,58 @@ struct ContentView: View {
     
     
     @StateObject private var project: Project = Project.shared
-    @State private var viewDetail: SubViews = .files
+    @State private var viewDetail: SubViews = .classes
+   
     var body: some View {
         SelectFolderView(project: project)
             
             
-        if project.rootNode != nil{
-            Picker("", selection: $viewDetail) {
-                
-                ForEach(SubViews.allCases) { option in
-                    
-                    Text(String(describing: option))
-                        .tag(option)
-                    
-                }
-            }
-            .pickerStyle(.segmented)
             
-            switch viewDetail{
-                
-            case .files:
-                if let node = project.rootNode{
-                    FileTreeView(node: node)
-                        .padding([.leading, .bottom])
-                }else{
-                    if project.path != nil{
-                        Button {
-                            project.findFiles()
-                        } label: {
-                            Text("Find Files")
+        if project.rootNode != nil{
+            HStack{
+                VStack{
+                    Picker("", selection: $viewDetail) {
+                        
+                        ForEach(SubViews.allCases) { option in
+                            
+                            Text(String(describing: option))
+                                .tag(option)
+                            
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    
+                    switch viewDetail{
+                        
+                    case .files:
+                        if let node = project.rootNode{
+                            FileTreeView(node: node)
+                                .padding([.leading, .bottom])
+                        }else{
+                            if project.path != nil{
+                                Button {
+                                    project.findFiles()
+                                } label: {
+                                    Text("Find Files")
+                                }
+                            }
+                        }
+                    case .classes:
+                        if !project.classes.isEmpty{
+                            ClassTreeView( project: project)
+                                .padding([.leading, .bottom, .trailing])
+                        }else{
+                            Button {
+                                project.findAllCalls()
+                            } label: {
+                                Text("Find Classes und so")
+                            }
                         }
                     }
                 }
-            case .classes:
-                if !project.classes.isEmpty{
-                    ClassTreeView( project: project)
-                        .padding([.leading, .bottom, .trailing])
-                }else{
-                    Button {
-                        project.findAllCalls()
-                    } label: {
-                        Text("Find Classes und so")
-                    }
-                }
+            //    CodeEditorView(project: project)
+                  
             }
-            
         }
     }
-}
-
-#Preview {
-    ContentView()
 }

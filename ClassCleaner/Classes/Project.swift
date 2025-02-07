@@ -18,6 +18,8 @@ class Project: ObservableObject{
     @Published var classes :[ClassElement] = []
     @Published var calls: [Call] = []
     
+    @Published var selectedFile: URL?
+    
     static var shared = Project()
     
     private init(){}
@@ -34,7 +36,7 @@ class Project: ObservableObject{
         if let path{
             rootNode = buildFileTree(at: path)
         }
-        if let rootNode {
+        if rootNode != nil {
             findAllCalls()
         }
     }
