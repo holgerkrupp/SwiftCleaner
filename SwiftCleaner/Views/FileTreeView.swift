@@ -1,3 +1,4 @@
+#if false
 //
 //  FileTreeView.swift
 //  SwiftCleaner
@@ -54,7 +55,6 @@ struct FileTreeView: View {
                                 Text("Parse")
                             }
                         }}
-                          //  .padding(.leading, CGFloat(node.depth * 20)) // Indent based on depth
                     
                     
                 }
@@ -64,3 +64,4 @@ struct FileTreeView: View {
     }
 }
 
+#endif

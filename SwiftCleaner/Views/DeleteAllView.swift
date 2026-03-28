@@ -1,3 +1,4 @@
+#if false
 //
 //  DeleteAllView.swift
 //  SwiftCleaner
@@ -36,3 +37,4 @@ struct DeleteAllView: View {
 #Preview {
     DeleteAllView()
 }
+#endif

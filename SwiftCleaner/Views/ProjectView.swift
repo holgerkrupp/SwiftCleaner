@@ -1,3 +1,4 @@
+#if false
 //
 //  ProjectView.swift
 //  SwiftCleaner
@@ -74,4 +75,4 @@ struct ProjectView: View {
     
     
 }
-
+#endif

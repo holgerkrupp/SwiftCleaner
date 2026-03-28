@@ -1,3 +1,4 @@
+#if false
 //
 //  ClassTree.swift
 //  SwiftCleaner
@@ -51,3 +52,4 @@ class ClassElement: Identifiable, ObservableObject {
         self.usageReferences = usageReferences
     }
 }
+#endif

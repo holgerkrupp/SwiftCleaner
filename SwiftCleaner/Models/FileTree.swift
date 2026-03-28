@@ -1,3 +1,4 @@
+#if false
 //
 //  FileTree.swift
 //  SwiftCleaner
@@ -23,10 +24,10 @@ class FileNode: Identifiable, ObservableObject {
     var url: URL // Full URL path
     var isFolder: Bool // Whether it's a folder
     var children: [FileNode]? // Child nodes (only for folders)
-    //var classTree: [ClassTree]? 
+
     var depth: Int // Depth in the tree
     
-    @Transient var fileType: FileType {
+    var fileType: FileType {
         print(url.absoluteString)
         if url.pathExtension.isEmpty {
             return FileType.other
@@ -64,4 +65,4 @@ class FileNode: Identifiable, ObservableObject {
         return parser.classes
     }
 }
-
+#endif

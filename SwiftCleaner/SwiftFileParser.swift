@@ -1,3 +1,4 @@
+#if false
 import SwiftSyntax
 import SwiftParser
 import Foundation
@@ -22,7 +23,7 @@ class SwiftFileParser: SyntaxVisitor {
         print("visited call: \(node.description)")
         if let calledFunction = node.calledExpression.as(FunctionCallExprSyntax.self)?.description {
             let line = sourceLocationConverter.location(for: node.positionAfterSkippingLeadingTrivia).line
-            functionCalls.append((name: calledFunction, line: line))
+            functionCalls.append((name: calledFunction, line: line ?? 0))
         }
         return .visitChildren
     }
@@ -31,7 +32,7 @@ class SwiftFileParser: SyntaxVisitor {
         
         let calledFunction = node.baseName.description
             let line = sourceLocationConverter.location(for: node.positionAfterSkippingLeadingTrivia).line
-            functionCalls.append((name: calledFunction, line: line))
+            functionCalls.append((name: calledFunction, line: line ?? 0))
         
         return .visitChildren
     }
@@ -39,7 +40,7 @@ class SwiftFileParser: SyntaxVisitor {
         print("visited call: \(node.description)")
         let calledFunction = node.description
             let line = sourceLocationConverter.location(for: node.positionAfterSkippingLeadingTrivia).line
-            functionCalls.append((name: calledFunction, line: line))
+            functionCalls.append((name: calledFunction, line: line ?? 0))
         
         return .visitChildren
     }
@@ -48,7 +49,7 @@ class SwiftFileParser: SyntaxVisitor {
         print("visited call: \(node.description)")
         if let calledFunction = node.calledExpression.as(SubscriptCallExprSyntax.self)?.description{
             let line = sourceLocationConverter.location(for: node.positionAfterSkippingLeadingTrivia).line
-            functionCalls.append((name: calledFunction, line: line))
+            functionCalls.append((name: calledFunction, line: line ?? 0))
         }
         return .visitChildren
     }
@@ -65,7 +66,7 @@ class SwiftFileParser: SyntaxVisitor {
         let location = sourceLocationConverter.location(for: node.positionAfterSkippingLeadingTrivia)
         let className = node.name.text
         
-        currentClass = ClassTree(name: className, file: location.file, line: location.line)
+        currentClass = ClassTree(name: className, file: location.file, line: location.line ?? 0)
         if let currentClass = currentClass {
             classes.append(currentClass)
         }
@@ -81,7 +82,7 @@ class SwiftFileParser: SyntaxVisitor {
         
         
         
-        currentClass = ClassTree(name: structName, file: location.file, line: location.line)
+        currentClass = ClassTree(name: structName, file: location.file, line: location.line ?? 0)
         if let currentClass = currentClass {
             classes.append(currentClass)
         }
@@ -104,7 +105,7 @@ class SwiftFileParser: SyntaxVisitor {
             name: methodName,
             signature: signature,
             file: location.file,
-            line: location.line
+            line: location.line ?? 0
         )
         currentClass.elements.append(element)
         return .skipChildren
@@ -129,7 +130,7 @@ class SwiftFileParser: SyntaxVisitor {
                     type: .property,
                     name: propertyName,
                     file: location.file,
-                    line: location.line
+                    line: location.line ?? 0
                 )
                 currentClass.elements.append(element)
             }
@@ -152,7 +153,7 @@ class SwiftFileParser: SyntaxVisitor {
             name: "Closure",
             signature: description,
             file: location.file,
-            line: location.line
+            line: location.line ?? 0
         )
         currentClass.elements.append(element)
         return .skipChildren
@@ -164,3 +165,4 @@ func parseSwiftSourceCode(_ sourceCode: String) -> SourceFileSyntax? {
         return sourceFile
     
 }
+#endif

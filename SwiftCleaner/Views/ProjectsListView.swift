@@ -1,3 +1,4 @@
+#if false
 //
 //  ProjectsListView.swift
 //  SwiftCleaner
@@ -41,3 +42,4 @@ struct ProjectsListView: View {
     }
 }
 */
+#endif

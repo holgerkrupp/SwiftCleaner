@@ -1,3 +1,4 @@
+#if false
 import SwiftUI
 
 struct ClassTreeView: View {
@@ -51,3 +52,4 @@ struct ClassTreeView: View {
         
     }
 }
+#endif

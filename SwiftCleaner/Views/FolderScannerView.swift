@@ -1,3 +1,4 @@
+#if false
 import SwiftUI
 
 struct FolderScannerView: View {
@@ -57,3 +58,4 @@ struct FolderScannerView_Previews: PreviewProvider {
         FolderScannerView()
     }
 }
+#endif

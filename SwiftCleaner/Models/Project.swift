@@ -1,3 +1,4 @@
+#if false
 //
 //  Project.swift
 //  SwiftCleaner
@@ -73,7 +74,7 @@ class Project: Identifiable, ObservableObject {
     }
     
     func findAllCalls(){
-        calls.removeAll()
+       
         visitedNodes.removeAll()
       
         guard let node = rootNode  else {
@@ -170,3 +171,4 @@ class Project: Identifiable, ObservableObject {
         return FileNode(name: folderName, url: directory, isFolder: true, children: children, depth: depth)
     }
 }
+#endif
