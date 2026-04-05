@@ -2,6 +2,11 @@ import SwiftUI
 
 struct ProjectStructureView: View {
     let files: [OutlineFile]
+    var onSelectFile: ((URL) -> Void)? = nil
+    var onSelectNode: ((OutlineNode) -> Void)? = nil
+    var usageCountForNode: ((OutlineNode) -> Int?)? = nil
+    var usageReferencesForNode: ((OutlineNode) -> [UsageReference])? = nil
+    var onUsageBadgeTap: ((OutlineNode) -> Void)? = nil
 
     @State private var searchText = ""
     @State private var expandedIDs: Set<String> = []
@@ -37,7 +42,14 @@ struct ProjectStructureView: View {
                         )
                     ) {
                         ForEach(file.children) { node in
-                            StructureNodeView(node: node, expandedIDs: $expandedIDs)
+                            StructureNodeView(
+                                node: node,
+                                expandedIDs: $expandedIDs,
+                                onSelectNode: onSelectNode,
+                                usageCountForNode: usageCountForNode,
+                                usageReferencesForNode: usageReferencesForNode,
+                                onUsageBadgeTap: onUsageBadgeTap
+                            )
                         }
                     } label: {
                         VStack(alignment: .leading, spacing: 4) {
@@ -49,6 +61,10 @@ struct ProjectStructureView: View {
                                 .foregroundStyle(.secondary)
                         }
                         .padding(.vertical, 2)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            onSelectFile?(file.url)
+                        }
                     }
                 }
             }
@@ -142,10 +158,22 @@ struct ProjectStructureView: View {
 private struct StructureNodeView: View {
     let node: OutlineNode
     @Binding var expandedIDs: Set<String>
+    var onSelectNode: ((OutlineNode) -> Void)? = nil
+    var usageCountForNode: ((OutlineNode) -> Int?)? = nil
+    var usageReferencesForNode: ((OutlineNode) -> [UsageReference])? = nil
+    var onUsageBadgeTap: ((OutlineNode) -> Void)? = nil
 
     var body: some View {
         if node.children.isEmpty {
-            StructureNodeLabel(node: node)
+            StructureNodeLabel(
+                node: node,
+                onSelect: onSelectNode,
+                usageCount: usageCountForNode?(node),
+                canOpenUsages: !(usageReferencesForNode?(node).isEmpty ?? true),
+                onUsageTap: {
+                    onUsageBadgeTap?(node)
+                }
+            )
                 .padding(.vertical, 2)
         } else {
             DisclosureGroup(
@@ -161,10 +189,25 @@ private struct StructureNodeView: View {
                 )
             ) {
                 ForEach(node.children) { child in
-                    StructureNodeView(node: child, expandedIDs: $expandedIDs)
+                    StructureNodeView(
+                        node: child,
+                        expandedIDs: $expandedIDs,
+                        onSelectNode: onSelectNode,
+                        usageCountForNode: usageCountForNode,
+                        usageReferencesForNode: usageReferencesForNode,
+                        onUsageBadgeTap: onUsageBadgeTap
+                    )
                 }
             } label: {
-                StructureNodeLabel(node: node)
+                StructureNodeLabel(
+                    node: node,
+                    onSelect: onSelectNode,
+                    usageCount: usageCountForNode?(node),
+                    canOpenUsages: !(usageReferencesForNode?(node).isEmpty ?? true),
+                    onUsageTap: {
+                        onUsageBadgeTap?(node)
+                    }
+                )
             }
         }
     }
@@ -172,6 +215,10 @@ private struct StructureNodeView: View {
 
 private struct StructureNodeLabel: View {
     let node: OutlineNode
+    var onSelect: ((OutlineNode) -> Void)? = nil
+    var usageCount: Int?
+    var canOpenUsages = false
+    var onUsageTap: (() -> Void)? = nil
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
@@ -192,9 +239,34 @@ private struct StructureNodeLabel: View {
 
             Spacer(minLength: 12)
 
-            Text("L\(node.line)")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            HStack(spacing: 8) {
+                if let usageCount {
+                    Button {
+                        onUsageTap?()
+                    } label: {
+                        Text("\(usageCount)x")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(usageCount == 0 ? .orange : .green)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(
+                                Capsule()
+                                    .fill((usageCount == 0 ? Color.orange : Color.green).opacity(0.18))
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!canOpenUsages)
+                    .help(canOpenUsages ? "Show usage locations" : "No usage locations available")
+                }
+
+                Text("L\(node.line)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onSelect?(node)
         }
     }
 

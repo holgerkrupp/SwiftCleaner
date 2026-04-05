@@ -1,8 +1,10 @@
 import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct ContentView: View {
     @StateObject private var analyzer = ProjectAnalyzer()
+    @State private var isDropTargeted = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -14,12 +16,17 @@ struct ContentView: View {
             }
 
             if analyzer.projectPath == nil {
-                ContentUnavailableView(
-                    "Select a Swift Project",
-                    systemImage: "folder.badge.questionmark",
-                    description: Text("SwiftCleaner will scan your Swift files, count references, and highlight declarations that look unused.")
-                )
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                Button(action: selectFolder) {
+                    ContentUnavailableView(
+                        "Select a Swift Project",
+                        systemImage: "folder.badge.questionmark",
+                        description: Text("SwiftCleaner will scan your Swift files, count references, and highlight declarations that look unused.")
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("Click to choose a Swift project folder.")
             } else {
                 ProjectDetailsView(analyzer: analyzer)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -27,6 +34,8 @@ struct ContentView: View {
         }
         .padding(24)
         .frame(minWidth: 980, minHeight: 700)
+        .background(dropTargetBackground)
+        .onDrop(of: [UTType.fileURL], isTargeted: $isDropTargeted, perform: handleProjectDrop(providers:))
     }
 
     private var controls: some View {
@@ -76,6 +85,53 @@ struct ContentView: View {
         Task {
             await analyzer.analyzeProject(at: url)
         }
+    }
+
+    @ViewBuilder
+    private var dropTargetBackground: some View {
+        if isDropTargeted {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(Color.accentColor.opacity(0.8), style: StrokeStyle(lineWidth: 2, dash: [8]))
+                .padding(10)
+        }
+    }
+
+    private func handleProjectDrop(providers: [NSItemProvider]) -> Bool {
+        guard let provider = providers.first(where: { $0.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) }) else {
+            return false
+        }
+
+        provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { item, _ in
+            let droppedURL: URL?
+
+            if let url = item as? URL {
+                droppedURL = url
+            } else if let data = item as? Data {
+                droppedURL = NSURL(absoluteURLWithDataRepresentation: data, relativeTo: nil) as URL?
+            } else if let text = item as? String {
+                droppedURL = URL(string: text)
+            } else {
+                droppedURL = nil
+            }
+
+            guard let droppedURL else {
+                return
+            }
+
+            let standardizedURL = droppedURL.standardizedFileURL
+            var isDirectory: ObjCBool = false
+            let exists = FileManager.default.fileExists(atPath: standardizedURL.path, isDirectory: &isDirectory)
+            guard exists else { return }
+
+            let projectURL = isDirectory.boolValue ? standardizedURL : standardizedURL.deletingLastPathComponent()
+
+            Task { @MainActor in
+                analyzer.setProjectPath(projectURL)
+                await analyzer.analyzeProject(at: projectURL)
+            }
+        }
+
+        return true
     }
 }
 

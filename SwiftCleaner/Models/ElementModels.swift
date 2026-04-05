@@ -137,6 +137,12 @@ struct LikelyUnusedFile: Identifiable, Hashable {
     let reason: String
 }
 
+struct DiskOnlySwiftFile: Identifiable, Hashable {
+    let id: String
+    let file: URL
+    let reason: String
+}
+
 struct ElementUsage: Identifiable, Hashable {
     let id: String
     let name: String
@@ -150,12 +156,14 @@ struct ElementUsage: Identifiable, Hashable {
     let containingType: String?
     let accessLevel: String?
     let usageCount: Int
+    let usageReferences: [UsageReference]
     let isUnused: Bool
     let note: String?
 
     init(
         from declaration: ElementDeclaration,
         usageCount: Int,
+        usageReferences: [UsageReference] = [],
         isUnused: Bool,
         note: String? = nil
     ) {
@@ -171,8 +179,19 @@ struct ElementUsage: Identifiable, Hashable {
         self.containingType = declaration.containingType
         self.accessLevel = declaration.accessLevel
         self.usageCount = usageCount
+        self.usageReferences = usageReferences
         self.isUnused = isUnused
         self.note = note
+    }
+}
+
+struct UsageReference: Identifiable, Hashable {
+    let file: URL
+    let line: Int
+    let column: Int
+
+    var id: String {
+        "\(file.standardizedFileURL.path)#\(line)#\(column)"
     }
 }
 
@@ -183,6 +202,7 @@ struct AnalysisSummary: Equatable {
     let referenceCount: Int
     let unusedCount: Int
     let unusedFileCount: Int
+    let diskOnlySwiftFileCount: Int
 
     static let empty = AnalysisSummary(
         fileCount: 0,
@@ -190,7 +210,8 @@ struct AnalysisSummary: Equatable {
         trackedDeclarationCount: 0,
         referenceCount: 0,
         unusedCount: 0,
-        unusedFileCount: 0
+        unusedFileCount: 0,
+        diskOnlySwiftFileCount: 0
     )
 }
 
@@ -244,6 +265,7 @@ enum UnusedItemAction: String, CaseIterable, Identifiable {
 struct AnalysisReport {
     let unusedElements: [UnusedElement]
     let likelyUnusedFiles: [LikelyUnusedFile]
+    let diskOnlySwiftFiles: [DiskOnlySwiftFile]
     let elementUsages: [ElementUsage]
     let outlineFiles: [OutlineFile]
     let summary: AnalysisSummary

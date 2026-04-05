@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ElementUsageView: View {
     let usages: [ElementUsage]
+    var onSelectUsage: ((ElementUsage) -> Void)? = nil
 
     @State private var expandedGroups: Set<String> = []
     @State private var searchText = ""
@@ -45,7 +46,7 @@ struct ElementUsageView: View {
                     )
                 ) {
                     ForEach(elements) { element in
-                        ElementUsageRow(element: element)
+                        ElementUsageRow(element: element, onSelect: onSelectUsage)
                     }
                 } label: {
                     HStack {
@@ -86,6 +87,7 @@ struct ElementUsageView: View {
 
 private struct ElementUsageRow: View {
     let element: ElementUsage
+    var onSelect: ((ElementUsage) -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -130,6 +132,10 @@ private struct ElementUsageRow: View {
                 }
             }
             .padding(.vertical, 4)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                onSelect?(element)
+            }
         }
     }
 

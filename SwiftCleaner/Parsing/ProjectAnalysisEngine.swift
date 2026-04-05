@@ -30,6 +30,22 @@ private struct AnalysisIndexes {
     let extensionInheritedTypeNames: [String: Set<String>]
 }
 
+private struct ProjectFileCatalog {
+    var usesProjectMetadata = false
+    var swiftFiles = Set<URL>()
+    var interfaceBuilderFiles = Set<URL>()
+}
+
+private struct LocatedReference {
+    let reference: CollectedReference
+    let file: URL
+}
+
+private struct UsageResolution {
+    let usageCounts: [String: Int]
+    let usageReferencesByDeclarationID: [String: [UsageReference]]
+}
+
 struct ProjectAnalysisEngine {
     private static let interfaceBuilderCustomClassPattern = try! NSRegularExpression(
         pattern: #"customClass="([A-Za-z_][A-Za-z0-9_]*)""#
@@ -78,18 +94,27 @@ struct ProjectAnalysisEngine {
     ]
 
     func analyze(at rootURL: URL, options: AnalysisOptions) throws -> AnalysisReport {
-        let swiftFiles = try findSwiftFiles(in: rootURL)
+        let folderSwiftFiles = try findSwiftFiles(in: rootURL)
+        let projectFileCatalog = try findProjectFileCatalog(in: rootURL)
+        let swiftFiles = projectFileCatalog.usesProjectMetadata
+            ? projectFileCatalog.swiftFiles.sorted { $0.path < $1.path }
+            : folderSwiftFiles
         guard !swiftFiles.isEmpty else {
             throw ProjectAnalysisError.noSwiftFilesFound
         }
 
-        let interfaceBuilderFiles = try findFiles(
-            in: rootURL,
-            pathExtensions: ["storyboard", "xib"]
-        )
+        let interfaceBuilderFiles = projectFileCatalog.usesProjectMetadata
+            ? projectFileCatalog.interfaceBuilderFiles.sorted { $0.path < $1.path }
+            : try findFiles(in: rootURL, pathExtensions: ["storyboard", "xib"])
+        let diskOnlySwiftFiles = projectFileCatalog.usesProjectMetadata
+            ? buildDiskOnlySwiftFiles(
+                allSwiftFiles: folderSwiftFiles,
+                projectSwiftFiles: projectFileCatalog.swiftFiles
+            )
+            : []
 
         var declarations: [ElementDeclaration] = []
-        var references: [CollectedReference] = []
+        var references: [LocatedReference] = []
         var outlineFiles: [OutlineFile] = []
         var projectProtocolRequirements: [String: Set<String>] = [:]
         var extensionInheritedTypeNames: [String: Set<String>] = [:]
@@ -101,7 +126,9 @@ struct ProjectAnalysisEngine {
             visitor.walk(syntax)
 
             declarations.append(contentsOf: visitor.declarations)
-            references.append(contentsOf: visitor.references)
+            references.append(contentsOf: visitor.references.map {
+                LocatedReference(reference: $0, file: fileURL)
+            })
             outlineFiles.append(visitor.outlineFile)
 
             for (protocolName, requirementNames) in visitor.protocolRequirements {
@@ -122,10 +149,11 @@ struct ProjectAnalysisEngine {
             extensionInheritedTypeNames: extensionInheritedTypeNames
         )
 
-        let usageCounts = resolveUsageCounts(for: references, indexes: indexes)
+        let usageResolution = resolveUsageData(for: references, indexes: indexes)
         let usages = buildUsageRows(
             declarations: declarations,
-            usageCounts: usageCounts,
+            usageCounts: usageResolution.usageCounts,
+            usageReferencesByDeclarationID: usageResolution.usageReferencesByDeclarationID,
             indexes: indexes,
             options: options
         )
@@ -142,10 +170,12 @@ struct ProjectAnalysisEngine {
         let sortedUsages = usages.sorted(by: usageSort)
         let sortedUnused = unusedElements.sorted(by: unusedSort)
         let sortedUnusedFiles = likelyUnusedFiles.sorted(by: unusedFileSort)
+        let sortedDiskOnlySwiftFiles = diskOnlySwiftFiles.sorted(by: diskOnlyFileSort)
 
         return AnalysisReport(
             unusedElements: sortedUnused,
             likelyUnusedFiles: sortedUnusedFiles,
+            diskOnlySwiftFiles: sortedDiskOnlySwiftFiles,
             elementUsages: sortedUsages,
             outlineFiles: outlineFiles.sorted { $0.url.path < $1.url.path },
             summary: AnalysisSummary(
@@ -154,9 +184,298 @@ struct ProjectAnalysisEngine {
                 trackedDeclarationCount: usages.count,
                 referenceCount: references.count,
                 unusedCount: sortedUnused.count,
-                unusedFileCount: sortedUnusedFiles.count
+                unusedFileCount: sortedUnusedFiles.count,
+                diskOnlySwiftFileCount: sortedDiskOnlySwiftFiles.count
             )
         )
+    }
+
+    private func findProjectFileCatalog(in rootURL: URL) throws -> ProjectFileCatalog {
+        let xcodeProjectURLs = try findXcodeProjects(in: rootURL)
+        guard !xcodeProjectURLs.isEmpty else {
+            return ProjectFileCatalog()
+        }
+
+        var catalog = ProjectFileCatalog(usesProjectMetadata: true)
+
+        for xcodeProjectURL in xcodeProjectURLs {
+            let projectCatalog = try projectFileCatalog(
+                from: xcodeProjectURL,
+                limitedTo: rootURL
+            )
+            catalog.swiftFiles.formUnion(projectCatalog.swiftFiles)
+            catalog.interfaceBuilderFiles.formUnion(projectCatalog.interfaceBuilderFiles)
+        }
+
+        return catalog
+    }
+
+    private func findXcodeProjects(in rootURL: URL) throws -> [URL] {
+        let resourceKeys: Set<URLResourceKey> = [.isDirectoryKey]
+        guard let enumerator = FileManager.default.enumerator(
+            at: rootURL,
+            includingPropertiesForKeys: Array(resourceKeys),
+            options: [.skipsHiddenFiles]
+        ) else {
+            return []
+        }
+
+        var projectURLs: [URL] = []
+
+        while let url = enumerator.nextObject() as? URL {
+            let values = try url.resourceValues(forKeys: resourceKeys)
+            guard values.isDirectory == true else { continue }
+
+            if skippedDirectories.contains(url.lastPathComponent) {
+                enumerator.skipDescendants()
+                continue
+            }
+
+            if url.pathExtension == "xcodeproj" {
+                projectURLs.append(url)
+                enumerator.skipDescendants()
+            }
+        }
+
+        return projectURLs.sorted { $0.path < $1.path }
+    }
+
+    private func projectFileCatalog(
+        from xcodeProjectURL: URL,
+        limitedTo rootURL: URL
+    ) throws -> ProjectFileCatalog {
+        let projectFileURL = xcodeProjectURL.appendingPathComponent("project.pbxproj")
+        let data = try Data(contentsOf: projectFileURL)
+        var format = PropertyListSerialization.PropertyListFormat.openStep
+        let propertyList = try PropertyListSerialization.propertyList(
+            from: data,
+            options: [],
+            format: &format
+        )
+
+        guard
+            let projectDictionary = propertyList as? [String: Any],
+            let objects = projectDictionary["objects"] as? [String: Any],
+            let rootObjectID = projectDictionary["rootObject"] as? String,
+            let rootObject = objects[rootObjectID] as? [String: Any]
+        else {
+            return ProjectFileCatalog(usesProjectMetadata: true)
+        }
+
+        let projectBaseURL = xcodeProjectURL.deletingLastPathComponent()
+        var catalog = ProjectFileCatalog(usesProjectMetadata: true)
+        var visitedObjectIDs = Set<String>()
+
+        var rootGroupIDs: [String] = []
+        if let mainGroupID = rootObject["mainGroup"] as? String {
+            rootGroupIDs.append(mainGroupID)
+        }
+
+        for targetID in rootObject["targets"] as? [String] ?? [] {
+            guard let target = objects[targetID] as? [String: Any] else { continue }
+            rootGroupIDs.append(contentsOf: target["fileSystemSynchronizedGroups"] as? [String] ?? [])
+        }
+
+        for groupID in rootGroupIDs {
+            try collectProjectFiles(
+                from: groupID,
+                parentURL: projectBaseURL,
+                projectBaseURL: projectBaseURL,
+                limitedTo: rootURL,
+                objects: objects,
+                catalog: &catalog,
+                visitedObjectIDs: &visitedObjectIDs
+            )
+        }
+
+        return catalog
+    }
+
+    private func collectProjectFiles(
+        from objectID: String,
+        parentURL: URL,
+        projectBaseURL: URL,
+        limitedTo rootURL: URL,
+        objects: [String: Any],
+        catalog: inout ProjectFileCatalog,
+        visitedObjectIDs: inout Set<String>
+    ) throws {
+        guard visitedObjectIDs.insert(objectID).inserted else { return }
+        guard let object = objects[objectID] as? [String: Any] else { return }
+
+        switch object["isa"] as? String {
+        case "PBXGroup":
+            let groupURL = resolveContainerURL(
+                for: object,
+                parentURL: parentURL,
+                projectBaseURL: projectBaseURL
+            )
+
+            for childID in object["children"] as? [String] ?? [] {
+                try collectProjectFiles(
+                    from: childID,
+                    parentURL: groupURL,
+                    projectBaseURL: projectBaseURL,
+                    limitedTo: rootURL,
+                    objects: objects,
+                    catalog: &catalog,
+                    visitedObjectIDs: &visitedObjectIDs
+                )
+            }
+
+        case "PBXVariantGroup":
+            if let variantURL = resolveFileURL(
+                for: object,
+                parentURL: parentURL,
+                projectBaseURL: projectBaseURL
+            ) {
+                addProjectFile(at: variantURL, limitedTo: rootURL, catalog: &catalog)
+            }
+
+            for childID in object["children"] as? [String] ?? [] {
+                try collectProjectFiles(
+                    from: childID,
+                    parentURL: parentURL,
+                    projectBaseURL: projectBaseURL,
+                    limitedTo: rootURL,
+                    objects: objects,
+                    catalog: &catalog,
+                    visitedObjectIDs: &visitedObjectIDs
+                )
+            }
+
+        case "PBXFileSystemSynchronizedRootGroup":
+            let groupURL = resolveContainerURL(
+                for: object,
+                parentURL: parentURL,
+                projectBaseURL: projectBaseURL
+            )
+            let synchronizedFiles = try findFiles(
+                in: groupURL,
+                pathExtensions: ["swift", "storyboard", "xib"]
+            )
+
+            for fileURL in synchronizedFiles {
+                addProjectFile(at: fileURL, limitedTo: rootURL, catalog: &catalog)
+            }
+
+        case "PBXFileReference":
+            if let fileURL = resolveFileURL(
+                for: object,
+                parentURL: parentURL,
+                projectBaseURL: projectBaseURL
+            ) {
+                addProjectFile(at: fileURL, limitedTo: rootURL, catalog: &catalog)
+            }
+
+        default:
+            return
+        }
+    }
+
+    private func resolveContainerURL(
+        for object: [String: Any],
+        parentURL: URL,
+        projectBaseURL: URL
+    ) -> URL {
+        let sourceTree = object["sourceTree"] as? String ?? "<group>"
+        let rawPath = normalizedPathComponent(object["path"] as? String)
+
+        return resolveURL(
+            sourceTree: sourceTree,
+            rawPath: rawPath,
+            parentURL: parentURL,
+            projectBaseURL: projectBaseURL
+        ) ?? parentURL
+    }
+
+    private func resolveFileURL(
+        for object: [String: Any],
+        parentURL: URL,
+        projectBaseURL: URL
+    ) -> URL? {
+        let sourceTree = object["sourceTree"] as? String ?? "<group>"
+        let rawPath = normalizedPathComponent(object["path"] as? String)
+            ?? normalizedPathComponent(object["name"] as? String)
+
+        return resolveURL(
+            sourceTree: sourceTree,
+            rawPath: rawPath,
+            parentURL: parentURL,
+            projectBaseURL: projectBaseURL
+        )
+    }
+
+    private func resolveURL(
+        sourceTree: String,
+        rawPath: String?,
+        parentURL: URL,
+        projectBaseURL: URL
+    ) -> URL? {
+        if let rawPath {
+            if rawPath.hasPrefix("$(SRCROOT)/") {
+                let relativePath = String(rawPath.dropFirst("$(SRCROOT)/".count))
+                return projectBaseURL.appendingPathComponent(relativePath).standardizedFileURL
+            }
+
+            if rawPath.hasPrefix("${SRCROOT}/") {
+                let relativePath = String(rawPath.dropFirst("${SRCROOT}/".count))
+                return projectBaseURL.appendingPathComponent(relativePath).standardizedFileURL
+            }
+
+            if rawPath.hasPrefix("/") {
+                return URL(fileURLWithPath: rawPath).standardizedFileURL
+            }
+        }
+
+        switch sourceTree {
+        case "<group>":
+            guard let rawPath else { return parentURL.standardizedFileURL }
+            return parentURL.appendingPathComponent(rawPath).standardizedFileURL
+
+        case "SOURCE_ROOT", "<sourceRoot>":
+            guard let rawPath else { return projectBaseURL.standardizedFileURL }
+            return projectBaseURL.appendingPathComponent(rawPath).standardizedFileURL
+
+        case "<absolute>":
+            guard let rawPath else { return nil }
+            return URL(fileURLWithPath: rawPath).standardizedFileURL
+
+        default:
+            return nil
+        }
+    }
+
+    private func addProjectFile(
+        at fileURL: URL,
+        limitedTo rootURL: URL,
+        catalog: inout ProjectFileCatalog
+    ) {
+        let standardizedFileURL = fileURL.standardizedFileURL
+        guard FileManager.default.fileExists(atPath: standardizedFileURL.path) else { return }
+        guard isInside(rootURL, fileURL: standardizedFileURL) else { return }
+
+        let pathExtension = standardizedFileURL.pathExtension.lowercased()
+        switch pathExtension {
+        case "swift":
+            catalog.swiftFiles.insert(standardizedFileURL)
+        case "storyboard", "xib":
+            catalog.interfaceBuilderFiles.insert(standardizedFileURL)
+        default:
+            break
+        }
+    }
+
+    private func isInside(_ rootURL: URL, fileURL: URL) -> Bool {
+        let rootPath = rootURL.standardizedFileURL.path
+        let filePath = fileURL.standardizedFileURL.path
+        return filePath == rootPath || filePath.hasPrefix(rootPath + "/")
+    }
+
+    private func normalizedPathComponent(_ rawPath: String?) -> String? {
+        guard let rawPath else { return nil }
+        let trimmedPath = rawPath.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedPath.isEmpty ? nil : trimmedPath
     }
 
     private func findSwiftFiles(in rootURL: URL) throws -> [URL] {
@@ -246,20 +565,40 @@ struct ProjectAnalysisEngine {
         )
     }
 
-    private func resolveUsageCounts(
-        for references: [CollectedReference],
+    private func resolveUsageData(
+        for references: [LocatedReference],
         indexes: AnalysisIndexes
-    ) -> [String: Int] {
+    ) -> UsageResolution {
         var usageCounts: [String: Int] = [:]
+        var usageReferencesByDeclarationID: [String: [UsageReference]] = [:]
 
-        for reference in references {
-            let matchedIDs = matchReference(reference, indexes: indexes)
+        for locatedReference in references {
+            let matchedIDs = matchReference(locatedReference.reference, indexes: indexes)
             for matchedID in matchedIDs {
                 usageCounts[matchedID, default: 0] += 1
+                usageReferencesByDeclarationID[matchedID, default: []].append(
+                    UsageReference(
+                        file: locatedReference.file,
+                        line: locatedReference.reference.line,
+                        column: locatedReference.reference.column
+                    )
+                )
             }
         }
 
-        return usageCounts
+        let sortedReferencesByDeclarationID = usageReferencesByDeclarationID.mapValues { references in
+            references
+                .sorted {
+                    if $0.file.path != $1.file.path { return $0.file.path < $1.file.path }
+                    if $0.line != $1.line { return $0.line < $1.line }
+                    return $0.column < $1.column
+                }
+        }
+
+        return UsageResolution(
+            usageCounts: usageCounts,
+            usageReferencesByDeclarationID: sortedReferencesByDeclarationID
+        )
     }
 
     private func matchReference(
@@ -460,11 +799,13 @@ struct ProjectAnalysisEngine {
     private func buildUsageRows(
         declarations: [ElementDeclaration],
         usageCounts: [String: Int],
+        usageReferencesByDeclarationID: [String: [UsageReference]],
         indexes: AnalysisIndexes,
         options: AnalysisOptions
     ) -> [ElementUsage] {
         declarations.map { declaration in
             let usageCount = usageCounts[declaration.id, default: 0]
+            let usageReferences = usageReferencesByDeclarationID[declaration.id, default: []]
             let disposition = usageDisposition(
                 for: declaration,
                 indexes: indexes,
@@ -476,6 +817,7 @@ struct ProjectAnalysisEngine {
                 return ElementUsage(
                     from: declaration,
                     usageCount: usageCount,
+                    usageReferences: usageReferences,
                     isUnused: usageCount == 0
                 )
 
@@ -483,6 +825,7 @@ struct ProjectAnalysisEngine {
                 return ElementUsage(
                     from: declaration,
                     usageCount: usageCount,
+                    usageReferences: usageReferences,
                     isUnused: false,
                     note: reason
                 )
@@ -491,6 +834,7 @@ struct ProjectAnalysisEngine {
                 return ElementUsage(
                     from: declaration,
                     usageCount: usageCount,
+                    usageReferences: usageReferences,
                     isUnused: false,
                     note: reason
                 )
@@ -527,6 +871,22 @@ struct ProjectAnalysisEngine {
                 line: sortedDeclarations.first?.line ?? 1,
                 primaryDeclarations: primaryDeclarations,
                 reason: fileReason(for: sortedDeclarations, indexes: indexes)
+            )
+        }
+    }
+
+    private func buildDiskOnlySwiftFiles(
+        allSwiftFiles: [URL],
+        projectSwiftFiles: Set<URL>
+    ) -> [DiskOnlySwiftFile] {
+        allSwiftFiles.compactMap { fileURL in
+            let standardizedFileURL = fileURL.standardizedFileURL
+            guard !projectSwiftFiles.contains(standardizedFileURL) else { return nil }
+
+            return DiskOnlySwiftFile(
+                id: standardizedFileURL.path,
+                file: standardizedFileURL,
+                reason: "This Swift file exists on disk but is not included in any Xcode project found in the selected folder."
             )
         }
     }
@@ -629,8 +989,8 @@ struct ProjectAnalysisEngine {
         })
     }
 
-    private func interfaceBuilderReferences(in files: [URL]) throws -> [CollectedReference] {
-        var references: [CollectedReference] = []
+    private func interfaceBuilderReferences(in files: [URL]) throws -> [LocatedReference] {
+        var references: [LocatedReference] = []
 
         for fileURL in files {
             let source = try String(contentsOf: fileURL, encoding: .utf8)
@@ -643,14 +1003,17 @@ struct ProjectAnalysisEngine {
             for match in matches {
                 guard match.numberOfRanges > 1 else { continue }
                 let className = nsSource.substring(with: match.range(at: 1))
-                references.append(CollectedReference(
-                    kind: .type,
-                    name: className,
-                    currentType: nil,
-                    baseChain: [],
-                    baseTypeHint: nil,
-                    line: 1,
-                    column: 1
+                references.append(LocatedReference(
+                    reference: CollectedReference(
+                        kind: .type,
+                        name: className,
+                        currentType: nil,
+                        baseChain: [],
+                        baseTypeHint: nil,
+                        line: 1,
+                        column: 1
+                    ),
+                    file: fileURL
                 ))
             }
         }
@@ -745,6 +1108,10 @@ struct ProjectAnalysisEngine {
         }
 
         return lhs.line < rhs.line
+    }
+
+    private func diskOnlyFileSort(lhs: DiskOnlySwiftFile, rhs: DiskOnlySwiftFile) -> Bool {
+        lhs.file.path < rhs.file.path
     }
 
     private func lastIdentifier(in name: String) -> String {

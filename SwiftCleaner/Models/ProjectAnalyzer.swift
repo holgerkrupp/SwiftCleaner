@@ -6,8 +6,10 @@ final class ProjectAnalyzer: ObservableObject {
     @Published var projectPath: URL?
     @Published var isAnalyzing = false
     @Published private(set) var isApplyingEdit = false
+    @Published private(set) var cleanupStatistics: CleanupActionStatistics
     @Published var unusedElements: [UnusedElement] = []
     @Published var likelyUnusedFiles: [LikelyUnusedFile] = []
+    @Published var diskOnlySwiftFiles: [DiskOnlySwiftFile] = []
     @Published var elementUsages: [ElementUsage] = []
     @Published var outlineFiles: [OutlineFile] = []
     @Published var summary: AnalysisSummary = .empty
@@ -15,6 +17,12 @@ final class ProjectAnalyzer: ObservableObject {
     @Published var errorMessage: String?
 
     private var writeAccessRootURL: URL?
+    private let cleanupStatisticsStore: CleanupActionStatisticsStore
+
+    init(cleanupStatisticsStore: CleanupActionStatisticsStore = CleanupActionStatisticsStore()) {
+        self.cleanupStatisticsStore = cleanupStatisticsStore
+        self.cleanupStatistics = cleanupStatisticsStore.load()
+    }
 
     func setProjectPath(_ url: URL) {
         projectPath = url
@@ -40,6 +48,7 @@ final class ProjectAnalyzer: ObservableObject {
         errorMessage = nil
         unusedElements = []
         likelyUnusedFiles = []
+        diskOnlySwiftFiles = []
         elementUsages = []
         outlineFiles = []
         summary = .empty
@@ -59,6 +68,7 @@ final class ProjectAnalyzer: ObservableObject {
 
             unusedElements = report.unusedElements
             likelyUnusedFiles = report.likelyUnusedFiles
+            diskOnlySwiftFiles = report.diskOnlySwiftFiles
             elementUsages = report.elementUsages
             outlineFiles = report.outlineFiles
             summary = report.summary
@@ -95,8 +105,10 @@ final class ProjectAnalyzer: ObservableObject {
             }
         }
 
+        let appliedResult: CleanupActionResult
+
         do {
-            try await Task.detached(priority: .userInitiated) {
+            appliedResult = try await Task.detached(priority: .userInitiated) {
                 try UnusedElementEditor().apply(action, to: elements)
             }.value
         } catch {
@@ -104,6 +116,12 @@ final class ProjectAnalyzer: ObservableObject {
             isApplyingEdit = false
             return
         }
+
+        cleanupStatistics = cleanupStatisticsStore.record(
+            action,
+            result: appliedResult,
+            projectURL: projectPath
+        )
 
         if action == .delete {
             removeDeletedElementsFromCurrentResults(elements)
@@ -176,7 +194,8 @@ final class ProjectAnalyzer: ObservableObject {
             trackedDeclarationCount: max(0, summary.trackedDeclarationCount - deletedIDs.count),
             referenceCount: summary.referenceCount,
             unusedCount: unusedElements.count,
-            unusedFileCount: likelyUnusedFiles.count
+            unusedFileCount: likelyUnusedFiles.count,
+            diskOnlySwiftFileCount: diskOnlySwiftFiles.count
         )
     }
 

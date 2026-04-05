@@ -23,33 +23,42 @@ private struct PlannedUnusedEdit {
 }
 
 struct UnusedElementEditor {
-    func apply(_ action: UnusedItemAction, to elements: [UnusedElement]) throws {
+    func apply(_ action: UnusedItemAction, to elements: [UnusedElement]) throws -> CleanupActionResult {
         let elementsByFile = Dictionary(grouping: elements, by: \.file)
+        var appliedResult = CleanupActionResult.zero
+
         for fileURL in elementsByFile.keys.sorted(by: { $0.path < $1.path }) {
             guard let fileElements = elementsByFile[fileURL] else { continue }
-            try apply(action, to: fileElements, in: fileURL)
+            appliedResult = appliedResult + (try apply(action, to: fileElements, in: fileURL))
         }
+
+        return appliedResult
     }
 
-    private func apply(_ action: UnusedItemAction, to elements: [UnusedElement], in fileURL: URL) throws {
+    private func apply(_ action: UnusedItemAction, to elements: [UnusedElement], in fileURL: URL) throws -> CleanupActionResult {
         let source = try String(contentsOf: fileURL, encoding: .utf8)
         var lines = splitLines(in: source)
         let edits = plannedEdits(from: elements)
-        guard !edits.isEmpty else { return }
+        guard !edits.isEmpty else { return .zero }
+
+        let appliedResult: CleanupActionResult
 
         switch action {
         case .commentOut:
-            try commentOut(edits, in: &lines)
+            appliedResult = try commentOut(edits, in: &lines)
         case .addMarkComment:
-            try addMarkComments(for: edits, in: &lines)
+            appliedResult = try addMarkComments(for: edits, in: &lines)
         case .delete:
-            try delete(edits, from: &lines)
+            appliedResult = try delete(edits, from: &lines)
         }
 
         let updatedSource = lines.joined(separator: "\n")
         if updatedSource != source {
             try updatedSource.write(to: fileURL, atomically: true, encoding: .utf8)
+            return appliedResult
         }
+
+        return .zero
     }
 
     private func plannedEdits(from elements: [UnusedElement]) -> [PlannedUnusedEdit] {
@@ -96,16 +105,37 @@ struct UnusedElementEditor {
         return edits
     }
 
-    private func commentOut(_ edits: [PlannedUnusedEdit], in lines: inout [String]) throws {
+    private func commentOut(_ edits: [PlannedUnusedEdit], in lines: inout [String]) throws -> CleanupActionResult {
+        var appliedElementCount = 0
+        var appliedLineCount = 0
+
         for edit in edits {
             let lineRange = try zeroBasedLineRange(for: edit, in: lines)
+            var changedLineCount = 0
             for index in lineRange {
-                lines[index] = commentPrefixing(lines[index])
+                let updatedLine = commentPrefixing(lines[index])
+                if updatedLine != lines[index] {
+                    lines[index] = updatedLine
+                    changedLineCount += 1
+                }
+            }
+
+            if changedLineCount > 0 {
+                appliedElementCount += edit.elements.count
+                appliedLineCount += changedLineCount
             }
         }
+
+        return CleanupActionResult(
+            itemCount: appliedElementCount,
+            lineCount: appliedLineCount
+        )
     }
 
-    private func addMarkComments(for edits: [PlannedUnusedEdit], in lines: inout [String]) throws {
+    private func addMarkComments(for edits: [PlannedUnusedEdit], in lines: inout [String]) throws -> CleanupActionResult {
+        var appliedElementCount = 0
+        var appliedLineCount = 0
+
         for edit in edits.reversed() {
             let insertionLine = edit.startLine - 1
             guard insertionLine >= 0, insertionLine <= lines.count else {
@@ -127,14 +157,31 @@ struct UnusedElementEditor {
             }
 
             lines.insert(markLine, at: insertionLine)
+            appliedElementCount += edit.elements.count
+            appliedLineCount += 1
         }
+
+        return CleanupActionResult(
+            itemCount: appliedElementCount,
+            lineCount: appliedLineCount
+        )
     }
 
-    private func delete(_ edits: [PlannedUnusedEdit], from lines: inout [String]) throws {
+    private func delete(_ edits: [PlannedUnusedEdit], from lines: inout [String]) throws -> CleanupActionResult {
+        var appliedElementCount = 0
+        var appliedLineCount = 0
+
         for edit in edits.reversed() {
             let lineRange = try zeroBasedLineRange(for: edit, in: lines)
             lines.removeSubrange(lineRange)
+            appliedElementCount += edit.elements.count
+            appliedLineCount += lineRange.count
         }
+
+        return CleanupActionResult(
+            itemCount: appliedElementCount,
+            lineCount: appliedLineCount
+        )
     }
 
     private func zeroBasedLineRange(

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct UnusedElementsView: View {
     @ObservedObject var analyzer: ProjectAnalyzer
+    var onSelectElement: ((UnusedElement) -> Void)? = nil
 
     @State private var expandedGroups: Set<String> = []
     @State private var searchText = ""
@@ -67,7 +68,11 @@ struct UnusedElementsView: View {
                         )
                     ) {
                         ForEach(elements) { element in
-                            UnusedElementRow(analyzer: analyzer, element: element)
+                            UnusedElementRow(
+                                analyzer: analyzer,
+                                element: element,
+                                onSelect: onSelectElement
+                            )
                         }
                     } label: {
                         HStack {
@@ -157,6 +162,7 @@ struct UnusedElementsView: View {
 private struct UnusedElementRow: View {
     @ObservedObject var analyzer: ProjectAnalyzer
     let element: UnusedElement
+    var onSelect: ((UnusedElement) -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -210,6 +216,10 @@ private struct UnusedElementRow: View {
                 }
             }
             .padding(.vertical, 4)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                onSelect?(element)
+            }
         }
     }
 
