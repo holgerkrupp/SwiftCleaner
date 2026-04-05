@@ -2,6 +2,8 @@ import SwiftUI
 
 struct ProjectStructureView: View {
     let files: [OutlineFile]
+    var selectedFileURL: URL? = nil
+    var selectedNodeID: String? = nil
     var onSelectFile: ((URL) -> Void)? = nil
     var onSelectNode: ((OutlineNode) -> Void)? = nil
     var usageCountForNode: ((OutlineNode) -> Int?)? = nil
@@ -17,59 +19,65 @@ struct ProjectStructureView: View {
     }
 
     var body: some View {
-        List {
+        VStack(spacing: 0) {
             controls
-
-            if filteredFiles.isEmpty {
-                ContentUnavailableView(
-                    "No Structure Matches",
-                    systemImage: "list.bullet.rectangle.portrait",
-                    description: Text(searchText.isEmpty ? "No outline data is available yet." : "Try a different search term.")
-                )
-                .frame(maxWidth: .infinity, minHeight: 260)
-            } else {
-                ForEach(filteredFiles) { file in
-                    DisclosureGroup(
-                        isExpanded: Binding(
-                            get: { expandedIDs.contains(file.id) },
-                            set: { isExpanded in
-                                if isExpanded {
-                                    expandedIDs.insert(file.id)
-                                } else {
-                                    expandedIDs.remove(file.id)
+            List {
+                if filteredFiles.isEmpty {
+                    ContentUnavailableView(
+                        "No Structure Matches",
+                        systemImage: "list.bullet.rectangle.portrait",
+                        description: Text(searchText.isEmpty ? "No outline data is available yet." : "Try a different search term.")
+                    )
+                    .frame(maxWidth: .infinity, minHeight: 260)
+                } else {
+                    ForEach(filteredFiles) { file in
+                        DisclosureGroup(
+                            isExpanded: Binding(
+                                get: { expandedIDs.contains(file.id) },
+                                set: { isExpanded in
+                                    if isExpanded {
+                                        expandedIDs.insert(file.id)
+                                    } else {
+                                        expandedIDs.remove(file.id)
+                                    }
                                 }
-                            }
-                        )
-                    ) {
-                        ForEach(file.children) { node in
-                            StructureNodeView(
-                                node: node,
-                                expandedIDs: $expandedIDs,
-                                onSelectNode: onSelectNode,
-                                usageCountForNode: usageCountForNode,
-                                usageReferencesForNode: usageReferencesForNode,
-                                onUsageBadgeTap: onUsageBadgeTap
                             )
-                        }
-                    } label: {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Label(file.url.lastPathComponent, systemImage: "doc.text")
-                                .font(.headline)
+                        ) {
+                            ForEach(file.children) { node in
+                                StructureNodeView(
+                                    node: node,
+                                    expandedIDs: $expandedIDs,
+                                    selectedNodeID: selectedNodeID,
+                                    onSelectNode: onSelectNode,
+                                    usageCountForNode: usageCountForNode,
+                                    usageReferencesForNode: usageReferencesForNode,
+                                    onUsageBadgeTap: onUsageBadgeTap
+                                )
+                            }
+                        } label: {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Label(file.url.lastPathComponent, systemImage: "doc.text")
+                                    .font(.headline)
 
-                            Text(file.url.deletingLastPathComponent().path)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        .padding(.vertical, 2)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            onSelectFile?(file.url)
+                                Text(file.url.deletingLastPathComponent().path)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .padding(.vertical, 2)
+                            .padding(.horizontal, 4)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                    .fill(isSelectedFile(file.url) ? Color.accentColor.opacity(0.2) : Color.clear)
+                            )
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                onSelectFile?(file.url)
+                            }
                         }
                     }
                 }
             }
         }
-        .searchable(text: $searchText)
         .onAppear {
             if expandedIDs.isEmpty {
                 expandedIDs = Set(files.map(\.id))
@@ -78,21 +86,42 @@ struct ProjectStructureView: View {
     }
 
     private var controls: some View {
-        HStack {
-            Text("Declaration Tree")
-                .font(.headline)
+        VStack(spacing: 8) {
+            HStack {
+                Text("Declaration Tree")
+                    .font(.headline)
 
-            Spacer()
+                Spacer()
 
-            Button("Expand All") {
-                expandedIDs = allExpandableIDs(in: filteredFiles)
+                Button("Expand All") {
+                    expandedIDs = allExpandableIDs(in: filteredFiles)
+                }
+
+                Button("Collapse All") {
+                    expandedIDs.removeAll()
+                }
             }
 
-            Button("Collapse All") {
-                expandedIDs.removeAll()
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+                TextField("Search symbols", text: $searchText)
+                    .textFieldStyle(.plain)
             }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(Color(nsColor: .textBackgroundColor))
+            )
         }
-        .padding(.vertical, 4)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+    }
+
+    private func isSelectedFile(_ fileURL: URL) -> Bool {
+        guard let selectedFileURL else { return false }
+        return selectedFileURL.standardizedFileURL == fileURL.standardizedFileURL
     }
 
     private func filter(_ file: OutlineFile, query: String) -> OutlineFile? {
@@ -158,6 +187,7 @@ struct ProjectStructureView: View {
 private struct StructureNodeView: View {
     let node: OutlineNode
     @Binding var expandedIDs: Set<String>
+    var selectedNodeID: String?
     var onSelectNode: ((OutlineNode) -> Void)? = nil
     var usageCountForNode: ((OutlineNode) -> Int?)? = nil
     var usageReferencesForNode: ((OutlineNode) -> [UsageReference])? = nil
@@ -167,6 +197,7 @@ private struct StructureNodeView: View {
         if node.children.isEmpty {
             StructureNodeLabel(
                 node: node,
+                isSelected: selectedNodeID == node.id,
                 onSelect: onSelectNode,
                 usageCount: usageCountForNode?(node),
                 canOpenUsages: !(usageReferencesForNode?(node).isEmpty ?? true),
@@ -192,6 +223,7 @@ private struct StructureNodeView: View {
                     StructureNodeView(
                         node: child,
                         expandedIDs: $expandedIDs,
+                        selectedNodeID: selectedNodeID,
                         onSelectNode: onSelectNode,
                         usageCountForNode: usageCountForNode,
                         usageReferencesForNode: usageReferencesForNode,
@@ -201,6 +233,7 @@ private struct StructureNodeView: View {
             } label: {
                 StructureNodeLabel(
                     node: node,
+                    isSelected: selectedNodeID == node.id,
                     onSelect: onSelectNode,
                     usageCount: usageCountForNode?(node),
                     canOpenUsages: !(usageReferencesForNode?(node).isEmpty ?? true),
@@ -215,6 +248,7 @@ private struct StructureNodeView: View {
 
 private struct StructureNodeLabel: View {
     let node: OutlineNode
+    var isSelected = false
     var onSelect: ((OutlineNode) -> Void)? = nil
     var usageCount: Int?
     var canOpenUsages = false
@@ -264,6 +298,11 @@ private struct StructureNodeLabel: View {
                     .foregroundStyle(.secondary)
             }
         }
+        .padding(.horizontal, 4)
+        .background(
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(isSelected ? Color.accentColor.opacity(0.22) : Color.clear)
+        )
         .contentShape(Rectangle())
         .onTapGesture {
             onSelect?(node)

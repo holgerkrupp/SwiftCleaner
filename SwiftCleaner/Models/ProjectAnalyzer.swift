@@ -1,10 +1,16 @@
 import AppKit
 import Foundation
 
+enum ProjectAccessMode {
+    case readOnly
+    case readWrite
+}
+
 @MainActor
 final class ProjectAnalyzer: ObservableObject {
     @Published var projectPath: URL?
     @Published var isAnalyzing = false
+    @Published private(set) var projectAccessMode: ProjectAccessMode = .readOnly
     @Published private(set) var isApplyingEdit = false
     @Published private(set) var cleanupStatistics: CleanupActionStatistics
     @Published var unusedElements: [UnusedElement] = []
@@ -31,6 +37,7 @@ final class ProjectAnalyzer: ObservableObject {
         if let writeAccessRootURL, !project(url, isInsideGrantedFolder: writeAccessRootURL) {
             self.writeAccessRootURL = nil
         }
+        refreshProjectAccessMode()
     }
 
     func analyzeSelectedProject() async {
@@ -130,6 +137,57 @@ final class ProjectAnalyzer: ObservableObject {
         isApplyingEdit = false
     }
 
+    func deleteUnusedFile(_ fileURL: URL, removeFromProject: Bool) async {
+        errorMessage = nil
+
+        guard let projectPath else {
+            errorMessage = "Select a Swift project folder first."
+            return
+        }
+
+        guard let writeAccessURL = requestWriteAccessIfNeeded(for: projectPath) else {
+            return
+        }
+
+        isApplyingEdit = true
+        let startedAccessing = writeAccessURL.startAccessingSecurityScopedResource()
+        defer {
+            if startedAccessing {
+                writeAccessURL.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        do {
+            try FileManager.default.removeItem(at: fileURL)
+            if removeFromProject {
+                _ = try XcodeProjectEditor().removeFileReferences(
+                    to: fileURL,
+                    inProjectRoot: projectPath
+                )
+            }
+
+            likelyUnusedFiles.removeAll { $0.file.standardizedFileURL == fileURL.standardizedFileURL }
+            diskOnlySwiftFiles.removeAll { $0.file.standardizedFileURL == fileURL.standardizedFileURL }
+            outlineFiles.removeAll { $0.url.standardizedFileURL == fileURL.standardizedFileURL }
+            unusedElements.removeAll { $0.file.standardizedFileURL == fileURL.standardizedFileURL }
+            elementUsages.removeAll { $0.file.standardizedFileURL == fileURL.standardizedFileURL }
+
+            summary = AnalysisSummary(
+                fileCount: summary.fileCount,
+                declarationCount: summary.declarationCount,
+                trackedDeclarationCount: elementUsages.count,
+                referenceCount: summary.referenceCount,
+                unusedCount: unusedElements.count,
+                unusedFileCount: likelyUnusedFiles.count,
+                diskOnlySwiftFileCount: diskOnlySwiftFiles.count
+            )
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+
+        isApplyingEdit = false
+    }
+
     private func requestWriteAccessIfNeeded(for projectURL: URL) -> URL? {
         if let writeAccessRootURL, project(projectURL, isInsideGrantedFolder: writeAccessRootURL) {
             return writeAccessRootURL
@@ -166,6 +224,7 @@ final class ProjectAnalyzer: ObservableObject {
         }
 
         writeAccessRootURL = selectedURL
+        refreshProjectAccessMode()
         return selectedURL
     }
 
@@ -174,6 +233,15 @@ final class ProjectAnalyzer: ObservableObject {
         let grantedPath = grantedFolderURL.standardizedFileURL.path
 
         return projectPath == grantedPath || projectPath.hasPrefix(grantedPath + "/")
+    }
+
+    private func refreshProjectAccessMode() {
+        guard let projectPath, let writeAccessRootURL else {
+            projectAccessMode = .readOnly
+            return
+        }
+
+        projectAccessMode = project(projectPath, isInsideGrantedFolder: writeAccessRootURL) ? .readWrite : .readOnly
     }
 
     private func removeDeletedElementsFromCurrentResults(_ elements: [UnusedElement]) {

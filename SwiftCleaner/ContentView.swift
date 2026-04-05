@@ -41,8 +41,13 @@ struct ContentView: View {
     private var controls: some View {
         HStack(alignment: .top, spacing: 16) {
             VStack(alignment: .leading, spacing: 8) {
-                Text(analyzer.projectPath?.lastPathComponent ?? "No project selected")
-                    .font(.title2.weight(.semibold))
+                HStack(spacing: 8) {
+                    Text(analyzer.projectPath?.lastPathComponent ?? "No project selected")
+                        .font(.title2.weight(.semibold))
+                    if analyzer.projectPath != nil {
+                        accessBadge
+                    }
+                }
 
                 Text(analyzer.projectPath?.path ?? "Choose the root folder of a Swift project or package.")
                     .foregroundStyle(.secondary)
@@ -68,6 +73,19 @@ struct ContentView: View {
             .disabled(analyzer.projectPath == nil || analyzer.isAnalyzing || analyzer.isApplyingEdit)
             .buttonStyle(.borderedProminent)
         }
+    }
+
+    private var accessBadge: some View {
+        let isReadWrite = analyzer.projectAccessMode == .readWrite
+        return Text(isReadWrite ? "Write Access" : "Read Only")
+            .font(.caption.weight(.semibold))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(
+                Capsule()
+                    .fill((isReadWrite ? Color.green : Color.gray).opacity(0.2))
+            )
+            .foregroundStyle(isReadWrite ? Color.green : Color.secondary)
     }
 
     private func selectFolder() {
