@@ -7,149 +7,137 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		481CE8EC2D563CC10018B9A7 /* AppIcon.afdesign in Resources */ = {isa = PBXBuildFile; fileRef = 481CE8EB2D563CC10018B9A7 /* AppIcon.afdesign */; };
-		4851BC372D5211D00081CFA1 /* SwiftBasicFormat in Frameworks */ = {isa = PBXBuildFile; productRef = 4851BC362D5211D00081CFA1 /* SwiftBasicFormat */; };
-		4851BC392D5211D00081CFA1 /* SwiftOperators in Frameworks */ = {isa = PBXBuildFile; productRef = 4851BC382D5211D00081CFA1 /* SwiftOperators */; };
-		4851BC3B2D5211D00081CFA1 /* SwiftParser in Frameworks */ = {isa = PBXBuildFile; productRef = 4851BC3A2D5211D00081CFA1 /* SwiftParser */; };
-		4851BC3D2D5211D00081CFA1 /* SwiftSyntax in Frameworks */ = {isa = PBXBuildFile; productRef = 4851BC3C2D5211D00081CFA1 /* SwiftSyntax */; };
-		4851BC622D560C910081CFA1 /* Highlightr in Frameworks */ = {isa = PBXBuildFile; productRef = 4851BC612D560C910081CFA1 /* Highlightr */; };
+		488DECF62F77FC1B0088432A /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 488DECF52F77FC1B0088432A /* AppIcon.icon */; };
+		488DECFB2F780B3E0088432A /* SwiftBasicFormat in Frameworks */ = {isa = PBXBuildFile; productRef = 488DECFA2F780B3E0088432A /* SwiftBasicFormat */; };
+		488DECFD2F780B3E0088432A /* SwiftOperators in Frameworks */ = {isa = PBXBuildFile; productRef = 488DECFC2F780B3E0088432A /* SwiftOperators */; };
+		488DECFF2F780B3E0088432A /* SwiftParser in Frameworks */ = {isa = PBXBuildFile; productRef = 488DECFE2F780B3E0088432A /* SwiftParser */; };
+		488DED012F780B3E0088432A /* SwiftSyntax in Frameworks */ = {isa = PBXBuildFile; productRef = 488DED002F780B3E0088432A /* SwiftSyntax */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		481CE8EB2D563CC10018B9A7 /* AppIcon.afdesign */ = {isa = PBXFileReference; lastKnownFileType = file; path = AppIcon.afdesign; sourceTree = "<group>"; };
-		4851BC0F2D51EF360081CFA1 /* SwiftCleaner.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SwiftCleaner.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		488DECF52F77FC1B0088432A /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
+		48B75ADC2D40D5450082A57D /* SwiftCleaner.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SwiftCleaner.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		4851BC112D51EF360081CFA1 /* ClassCleaner */ = {
+		48B75ADE2D40D5450082A57D /* SwiftCleaner */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = ClassCleaner;
+			path = SwiftCleaner;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		4851BC0C2D51EF360081CFA1 /* Frameworks */ = {
+		48B75AD92D40D5450082A57D /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4851BC622D560C910081CFA1 /* Highlightr in Frameworks */,
-				4851BC392D5211D00081CFA1 /* SwiftOperators in Frameworks */,
-				4851BC3B2D5211D00081CFA1 /* SwiftParser in Frameworks */,
-				4851BC372D5211D00081CFA1 /* SwiftBasicFormat in Frameworks */,
-				4851BC3D2D5211D00081CFA1 /* SwiftSyntax in Frameworks */,
+				488DECFD2F780B3E0088432A /* SwiftOperators in Frameworks */,
+				488DECFF2F780B3E0088432A /* SwiftParser in Frameworks */,
+				488DECFB2F780B3E0088432A /* SwiftBasicFormat in Frameworks */,
+				488DED012F780B3E0088432A /* SwiftSyntax in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		4851BC062D51EF360081CFA1 = {
+		48B75AD32D40D5450082A57D = {
 			isa = PBXGroup;
 			children = (
-				481CE8EB2D563CC10018B9A7 /* AppIcon.afdesign */,
-				4851BC112D51EF360081CFA1 /* ClassCleaner */,
-				4851BC352D5211D00081CFA1 /* Frameworks */,
-				4851BC102D51EF360081CFA1 /* Products */,
+				488DECF52F77FC1B0088432A /* AppIcon.icon */,
+				48B75ADE2D40D5450082A57D /* SwiftCleaner */,
+				48B75ADD2D40D5450082A57D /* Products */,
 			);
 			sourceTree = "<group>";
 		};
-		4851BC102D51EF360081CFA1 /* Products */ = {
+		48B75ADD2D40D5450082A57D /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				4851BC0F2D51EF360081CFA1 /* SwiftCleaner.app */,
+				48B75ADC2D40D5450082A57D /* SwiftCleaner.app */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		4851BC352D5211D00081CFA1 /* Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		4851BC0E2D51EF360081CFA1 /* SwiftCleaner */ = {
+		48B75ADB2D40D5450082A57D /* SwiftCleaner */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 4851BC1E2D51EF380081CFA1 /* Build configuration list for PBXNativeTarget "SwiftCleaner" */;
+			buildConfigurationList = 48B75AED2D40D54A0082A57D /* Build configuration list for PBXNativeTarget "SwiftCleaner" */;
 			buildPhases = (
-				4851BC0B2D51EF360081CFA1 /* Sources */,
-				4851BC0C2D51EF360081CFA1 /* Frameworks */,
-				4851BC0D2D51EF360081CFA1 /* Resources */,
+				48B75AD82D40D5450082A57D /* Sources */,
+				48B75AD92D40D5450082A57D /* Frameworks */,
+				48B75ADA2D40D5450082A57D /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				4851BC112D51EF360081CFA1 /* ClassCleaner */,
+				48B75ADE2D40D5450082A57D /* SwiftCleaner */,
 			);
 			name = SwiftCleaner;
 			packageProductDependencies = (
-				4851BC362D5211D00081CFA1 /* SwiftBasicFormat */,
-				4851BC382D5211D00081CFA1 /* SwiftOperators */,
-				4851BC3A2D5211D00081CFA1 /* SwiftParser */,
-				4851BC3C2D5211D00081CFA1 /* SwiftSyntax */,
-				4851BC612D560C910081CFA1 /* Highlightr */,
+				488DECFA2F780B3E0088432A /* SwiftBasicFormat */,
+				488DECFC2F780B3E0088432A /* SwiftOperators */,
+				488DECFE2F780B3E0088432A /* SwiftParser */,
+				488DED002F780B3E0088432A /* SwiftSyntax */,
 			);
-			productName = ClassCleaner;
-			productReference = 4851BC0F2D51EF360081CFA1 /* SwiftCleaner.app */;
+			productName = SwiftCleaner;
+			productReference = 48B75ADC2D40D5450082A57D /* SwiftCleaner.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		4851BC072D51EF360081CFA1 /* Project object */ = {
+		48B75AD42D40D5450082A57D /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1620;
 				LastUpgradeCheck = 1620;
 				TargetAttributes = {
-					4851BC0E2D51EF360081CFA1 = {
+					48B75ADB2D40D5450082A57D = {
 						CreatedOnToolsVersion = 16.2;
 					};
 				};
 			};
-			buildConfigurationList = 4851BC0A2D51EF360081CFA1 /* Build configuration list for PBXProject "SwiftCleaner" */;
+			buildConfigurationList = 48B75AD72D40D5450082A57D /* Build configuration list for PBXProject "SwiftCleaner" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
 				Base,
 			);
-			mainGroup = 4851BC062D51EF360081CFA1;
+			mainGroup = 48B75AD32D40D5450082A57D;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				4851BC322D5210F60081CFA1 /* XCRemoteSwiftPackageReference "swift-syntax" */,
-				4851BC602D560C910081CFA1 /* XCRemoteSwiftPackageReference "Highlightr" */,
+				488DECF92F780B3E0088432A /* XCRemoteSwiftPackageReference "swift-syntax" */,
 			);
 			preferredProjectObjectVersion = 77;
-			productRefGroup = 4851BC102D51EF360081CFA1 /* Products */;
+			productRefGroup = 48B75ADD2D40D5450082A57D /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				4851BC0E2D51EF360081CFA1 /* SwiftCleaner */,
+				48B75ADB2D40D5450082A57D /* SwiftCleaner */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		4851BC0D2D51EF360081CFA1 /* Resources */ = {
+		48B75ADA2D40D5450082A57D /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				481CE8EC2D563CC10018B9A7 /* AppIcon.afdesign in Resources */,
+				488DECF62F77FC1B0088432A /* AppIcon.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		4851BC0B2D51EF360081CFA1 /* Sources */ = {
+		48B75AD82D40D5450082A57D /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -159,7 +147,7 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		4851BC1C2D51EF380081CFA1 /* Debug */ = {
+		48B75AEB2D40D54A0082A57D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -222,7 +210,7 @@
 			};
 			name = Debug;
 		};
-		4851BC1D2D51EF380081CFA1 /* Release */ = {
+		48B75AEC2D40D54A0082A57D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -277,27 +265,29 @@
 			};
 			name = Release;
 		};
-		4851BC1F2D51EF380081CFA1 /* Debug */ = {
+		48B75AEE2D40D54A0082A57D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
-				CODE_SIGN_ENTITLEMENTS = ClassCleaner/ClassCleaner.entitlements;
+				CODE_SIGN_ENTITLEMENTS = SwiftCleaner/SwiftCleaner.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = "\"ClassCleaner/Preview Content\"";
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_ASSET_PATHS = "\"SwiftCleaner/Preview Content\"";
 				DEVELOPMENT_TEAM = 46D3VYP253;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = SourceCleaner;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.1;
+				MACOSX_DEPLOYMENT_TARGET = 14.6;
+				MARKETING_VERSION = 2026.1;
 				PRODUCT_BUNDLE_IDENTIFIER = de.holgerkrupp.SwiftCleaner;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -305,27 +295,29 @@
 			};
 			name = Debug;
 		};
-		4851BC202D51EF380081CFA1 /* Release */ = {
+		48B75AEF2D40D54A0082A57D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
-				CODE_SIGN_ENTITLEMENTS = ClassCleaner/ClassCleaner.entitlements;
+				CODE_SIGN_ENTITLEMENTS = SwiftCleaner/SwiftCleaner.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = "\"ClassCleaner/Preview Content\"";
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_ASSET_PATHS = "\"SwiftCleaner/Preview Content\"";
 				DEVELOPMENT_TEAM = 46D3VYP253;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = SourceCleaner;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.1;
+				MACOSX_DEPLOYMENT_TARGET = 14.6;
+				MARKETING_VERSION = 2026.1;
 				PRODUCT_BUNDLE_IDENTIFIER = de.holgerkrupp.SwiftCleaner;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -336,20 +328,20 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		4851BC0A2D51EF360081CFA1 /* Build configuration list for PBXProject "SwiftCleaner" */ = {
+		48B75AD72D40D5450082A57D /* Build configuration list for PBXProject "SwiftCleaner" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				4851BC1C2D51EF380081CFA1 /* Debug */,
-				4851BC1D2D51EF380081CFA1 /* Release */,
+				48B75AEB2D40D54A0082A57D /* Debug */,
+				48B75AEC2D40D54A0082A57D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		4851BC1E2D51EF380081CFA1 /* Build configuration list for PBXNativeTarget "SwiftCleaner" */ = {
+		48B75AED2D40D54A0082A57D /* Build configuration list for PBXNativeTarget "SwiftCleaner" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				4851BC1F2D51EF380081CFA1 /* Debug */,
-				4851BC202D51EF380081CFA1 /* Release */,
+				48B75AEE2D40D54A0082A57D /* Debug */,
+				48B75AEF2D40D54A0082A57D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -357,51 +349,38 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		4851BC322D5210F60081CFA1 /* XCRemoteSwiftPackageReference "swift-syntax" */ = {
+		488DECF92F780B3E0088432A /* XCRemoteSwiftPackageReference "swift-syntax" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/swiftlang/swift-syntax";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 600.0.1;
-			};
-		};
-		4851BC602D560C910081CFA1 /* XCRemoteSwiftPackageReference "Highlightr" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/raspu/Highlightr.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 2.2.1;
+				minimumVersion = 603.0.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		4851BC362D5211D00081CFA1 /* SwiftBasicFormat */ = {
+		488DECFA2F780B3E0088432A /* SwiftBasicFormat */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 4851BC322D5210F60081CFA1 /* XCRemoteSwiftPackageReference "swift-syntax" */;
+			package = 488DECF92F780B3E0088432A /* XCRemoteSwiftPackageReference "swift-syntax" */;
 			productName = SwiftBasicFormat;
 		};
-		4851BC382D5211D00081CFA1 /* SwiftOperators */ = {
+		488DECFC2F780B3E0088432A /* SwiftOperators */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 4851BC322D5210F60081CFA1 /* XCRemoteSwiftPackageReference "swift-syntax" */;
+			package = 488DECF92F780B3E0088432A /* XCRemoteSwiftPackageReference "swift-syntax" */;
 			productName = SwiftOperators;
 		};
-		4851BC3A2D5211D00081CFA1 /* SwiftParser */ = {
+		488DECFE2F780B3E0088432A /* SwiftParser */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 4851BC322D5210F60081CFA1 /* XCRemoteSwiftPackageReference "swift-syntax" */;
+			package = 488DECF92F780B3E0088432A /* XCRemoteSwiftPackageReference "swift-syntax" */;
 			productName = SwiftParser;
 		};
-		4851BC3C2D5211D00081CFA1 /* SwiftSyntax */ = {
+		488DED002F780B3E0088432A /* SwiftSyntax */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 4851BC322D5210F60081CFA1 /* XCRemoteSwiftPackageReference "swift-syntax" */;
+			package = 488DECF92F780B3E0088432A /* XCRemoteSwiftPackageReference "swift-syntax" */;
 			productName = SwiftSyntax;
-		};
-		4851BC612D560C910081CFA1 /* Highlightr */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 4851BC602D560C910081CFA1 /* XCRemoteSwiftPackageReference "Highlightr" */;
-			productName = Highlightr;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
-	rootObject = 4851BC072D51EF360081CFA1 /* Project object */;
+	rootObject = 48B75AD42D40D5450082A57D /* Project object */;
 }
