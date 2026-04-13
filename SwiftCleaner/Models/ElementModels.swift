@@ -220,6 +220,7 @@ struct AnalysisOptions: Equatable {
 }
 
 enum UnusedItemAction: String, CaseIterable, Identifiable {
+    case ignore = "Ignore"
     case commentOut = "Comment Out"
     case addMarkComment = "Add // MARK: Comment"
     case delete = "Delete"
@@ -232,6 +233,7 @@ enum UnusedItemAction: String, CaseIterable, Identifiable {
 
     var shortTitle: String {
         switch self {
+        case .ignore: return "Ignore"
         case .commentOut: return "Comment Out"
         case .addMarkComment: return "Add MARK"
         case .delete: return "Delete"
@@ -240,6 +242,7 @@ enum UnusedItemAction: String, CaseIterable, Identifiable {
 
     var systemImage: String {
         switch self {
+        case .ignore: return "eye.slash"
         case .commentOut: return "text.badge.minus"
         case .addMarkComment: return "text.insert"
         case .delete: return "trash"
@@ -252,6 +255,8 @@ enum UnusedItemAction: String, CaseIterable, Identifiable {
 
     func confirmationMessage(count: Int) -> String {
         switch self {
+        case .ignore:
+            return "This will hide the selected declarations from the unused list for this project without changing source files."
         case .commentOut:
             return "This will comment out the selected declarations in their source files."
         case .addMarkComment:

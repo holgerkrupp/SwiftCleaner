@@ -117,6 +117,7 @@ final class SourceVisitor: SyntaxVisitor {
 
     private let url: URL
     private let lineMap: SourceLineMap
+    private let previewIgnoredLines: Set<Int>
 
     private var typeStack: [TypeContext] = []
     private var valueScopes: [[String: String]] = [[:]]
@@ -139,6 +140,7 @@ final class SourceVisitor: SyntaxVisitor {
     init(url: URL, source: String) {
         self.url = url
         self.lineMap = SourceLineMap(source: source)
+        self.previewIgnoredLines = Self.previewLineNumbersToIgnore(in: source)
         super.init(viewMode: .sourceAccurate)
     }
 
@@ -535,8 +537,12 @@ final class SourceVisitor: SyntaxVisitor {
     }
 
     override func visit(_ node: MemberAccessExprSyntax) -> SyntaxVisitorContinueKind {
-        let base = baseReferenceContext(for: node.base)
         let location = location(for: node.positionAfterSkippingLeadingTrivia)
+        guard !previewIgnoredLines.contains(location.line) else {
+            return .visitChildren
+        }
+
+        let base = baseReferenceContext(for: node.base)
 
         for referenceName in referenceNames(from: memberAccessName(for: node)) {
             references.append(CollectedReference(
@@ -786,6 +792,7 @@ final class SourceVisitor: SyntaxVisitor {
 
     private func addIdentifierReference(_ rawName: String, at position: AbsolutePosition) {
         let location = location(for: position)
+        guard !previewIgnoredLines.contains(location.line) else { return }
 
         for referenceName in referenceNames(from: rawName) {
             guard !Self.ignoredReferenceNames.contains(referenceName) else { continue }
@@ -809,6 +816,8 @@ final class SourceVisitor: SyntaxVisitor {
 
     private func addTypeReference(_ typeName: String, at position: AbsolutePosition) {
         let location = location(for: position)
+        guard !previewIgnoredLines.contains(location.line) else { return }
+
         references.append(CollectedReference(
             kind: .type,
             name: typeName,
@@ -854,8 +863,7 @@ final class SourceVisitor: SyntaxVisitor {
         }
 
         if let reference = expression.as(DeclReferenceExprSyntax.self) {
-            let names = referenceNames(from: reference.baseName.text)
-            let name = names.first ?? reference.baseName.text
+            let name = preferredBaseReferenceName(from: reference.baseName.text)
             return BaseReferenceContext(
                 chain: [name],
                 typeHint: name == "self" ? currentTypeName : lookupBinding(named: name)
@@ -918,6 +926,26 @@ final class SourceVisitor: SyntaxVisitor {
         return Array(NSOrderedSet(array: names)) as? [String] ?? names
     }
 
+    private func preferredBaseReferenceName(from rawName: String) -> String {
+        let candidates = referenceNames(from: rawName)
+
+        if let bindingMatch = candidates.first(where: { lookupBinding(named: $0) != nil }) {
+            return bindingMatch
+        }
+
+        if rawName.hasPrefix("$"),
+           let projectedCandidate = candidates.first(where: { !$0.hasPrefix("$") }) {
+            return projectedCandidate
+        }
+
+        if rawName.hasPrefix("_"),
+           let strippedCandidate = candidates.first(where: { !$0.hasPrefix("_") }) {
+            return strippedCandidate
+        }
+
+        return candidates.first ?? rawName
+    }
+
     private func normalizedQualifiedTypeName(from rawText: String) -> String? {
         let text = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return nil }
@@ -939,5 +967,85 @@ final class SourceVisitor: SyntaxVisitor {
 
     private func trimmed(_ text: String) -> String {
         text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func previewLineNumbersToIgnore(in source: String) -> Set<Int> {
+        let lines = source.split(omittingEmptySubsequences: false, whereSeparator: \.isNewline)
+        guard !lines.isEmpty else { return [] }
+
+        var ignoredLines = Set<Int>()
+        var lineIndex = 0
+
+        while lineIndex < lines.count {
+            let lineText = String(lines[lineIndex])
+            guard lineText.contains("#Preview") else {
+                lineIndex += 1
+                continue
+            }
+
+            var currentLine = lineIndex
+            var inString = false
+            var foundOpeningBrace = false
+            var braceDepth = 0
+
+            while currentLine < lines.count {
+                let text = String(lines[currentLine])
+                var index = text.startIndex
+                var escaped = false
+
+                while index < text.endIndex {
+                    let character = text[index]
+                    let nextIndex = text.index(after: index)
+                    let nextCharacter = nextIndex < text.endIndex ? text[nextIndex] : nil
+
+                    if !inString, character == "/", nextCharacter == "/" {
+                        break
+                    }
+
+                    if character == "\"", !escaped {
+                        inString.toggle()
+                    }
+
+                    if !inString {
+                        if character == "{" {
+                            foundOpeningBrace = true
+                            braceDepth += 1
+                        } else if character == "}", foundOpeningBrace {
+                            braceDepth -= 1
+                            if braceDepth == 0 {
+                                for ignoredLine in (lineIndex + 1)...(currentLine + 1) {
+                                    ignoredLines.insert(ignoredLine)
+                                }
+                                lineIndex = currentLine
+                                break
+                            }
+                        }
+                    }
+
+                    escaped = (character == "\\") && !escaped
+                    if character != "\\" {
+                        escaped = false
+                    }
+                    index = nextIndex
+                }
+
+                if foundOpeningBrace, braceDepth == 0 {
+                    break
+                }
+
+                currentLine += 1
+            }
+
+            if foundOpeningBrace, braceDepth > 0 {
+                for ignoredLine in (lineIndex + 1)...lines.count {
+                    ignoredLines.insert(ignoredLine)
+                }
+                break
+            }
+
+            lineIndex += 1
+        }
+
+        return ignoredLines
     }
 }

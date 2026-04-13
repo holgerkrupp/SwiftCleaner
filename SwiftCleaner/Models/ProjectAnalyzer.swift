@@ -24,10 +24,17 @@ final class ProjectAnalyzer: ObservableObject {
 
     private var writeAccessRootURL: URL?
     private let cleanupStatisticsStore: CleanupActionStatisticsStore
+    private let ignoredUnusedElementsStore: IgnoredUnusedElementsStore
+    private var ignoredUnusedElementIDsByProjectPath: [String: Set<String>]
 
-    init(cleanupStatisticsStore: CleanupActionStatisticsStore = CleanupActionStatisticsStore()) {
+    init(
+        cleanupStatisticsStore: CleanupActionStatisticsStore = CleanupActionStatisticsStore(),
+        ignoredUnusedElementsStore: IgnoredUnusedElementsStore = IgnoredUnusedElementsStore()
+    ) {
         self.cleanupStatisticsStore = cleanupStatisticsStore
+        self.ignoredUnusedElementsStore = ignoredUnusedElementsStore
         self.cleanupStatistics = cleanupStatisticsStore.load()
+        self.ignoredUnusedElementIDsByProjectPath = ignoredUnusedElementsStore.load()
     }
 
     func setProjectPath(_ url: URL) {
@@ -73,12 +80,23 @@ final class ProjectAnalyzer: ObservableObject {
                 try ProjectAnalysisEngine().analyze(at: url, options: options)
             }.value
 
-            unusedElements = report.unusedElements
+            let ignoredIDs = ignoredDeclarationIDs(for: url)
+            let visibleUnusedElements = report.unusedElements.filter { !ignoredIDs.contains($0.id) }
+
+            unusedElements = visibleUnusedElements
             likelyUnusedFiles = report.likelyUnusedFiles
             diskOnlySwiftFiles = report.diskOnlySwiftFiles
             elementUsages = report.elementUsages
             outlineFiles = report.outlineFiles
-            summary = report.summary
+            summary = AnalysisSummary(
+                fileCount: report.summary.fileCount,
+                declarationCount: report.summary.declarationCount,
+                trackedDeclarationCount: report.summary.trackedDeclarationCount,
+                referenceCount: report.summary.referenceCount,
+                unusedCount: visibleUnusedElements.count,
+                unusedFileCount: report.summary.unusedFileCount,
+                diskOnlySwiftFileCount: report.summary.diskOnlySwiftFileCount
+            )
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -96,6 +114,11 @@ final class ProjectAnalyzer: ObservableObject {
 
         guard let projectPath else {
             errorMessage = "Select a Swift project folder first."
+            return
+        }
+
+        if action == .ignore {
+            ignore(elements, for: projectPath)
             return
         }
 
@@ -186,6 +209,12 @@ final class ProjectAnalyzer: ObservableObject {
         }
 
         isApplyingEdit = false
+    }
+
+    func clearIgnoredUnusedDeclarationsForCurrentProject() {
+        guard let projectPath else { return }
+        ignoredUnusedElementIDsByProjectPath.removeValue(forKey: projectPath.standardizedFileURL.path)
+        ignoredUnusedElementsStore.save(ignoredUnusedElementIDsByProjectPath)
     }
 
     private func requestWriteAccessIfNeeded(for projectURL: URL) -> URL? {
@@ -313,5 +342,29 @@ final class ProjectAnalyzer: ObservableObject {
         case .variable: return .variable
         case .enumCase: return .enumCase
         }
+    }
+
+    private func ignoredDeclarationIDs(for projectURL: URL) -> Set<String> {
+        ignoredUnusedElementIDsByProjectPath[projectURL.standardizedFileURL.path, default: []]
+    }
+
+    private func ignore(_ elements: [UnusedElement], for projectURL: URL) {
+        let ignoredIDs = Set(elements.map(\.id))
+        guard !ignoredIDs.isEmpty else { return }
+
+        let projectPath = projectURL.standardizedFileURL.path
+        ignoredUnusedElementIDsByProjectPath[projectPath, default: []].formUnion(ignoredIDs)
+        ignoredUnusedElementsStore.save(ignoredUnusedElementIDsByProjectPath)
+
+        unusedElements.removeAll { ignoredIDs.contains($0.id) }
+        summary = AnalysisSummary(
+            fileCount: summary.fileCount,
+            declarationCount: summary.declarationCount,
+            trackedDeclarationCount: summary.trackedDeclarationCount,
+            referenceCount: summary.referenceCount,
+            unusedCount: unusedElements.count,
+            unusedFileCount: summary.unusedFileCount,
+            diskOnlySwiftFileCount: summary.diskOnlySwiftFileCount
+        )
     }
 }

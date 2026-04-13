@@ -2,6 +2,41 @@
   "fill" : "automatic",
   "groups" : [
     {
+      "layers" : [
+        {
+          "glass" : true,
+          "image-name" : "bird white.svg",
+          "name" : "bird white",
+          "position" : {
+            "scale" : 0.7,
+            "translation-in-points" : [
+              -56.6640625,
+              3.8828125
+            ]
+          }
+        },
+        {
+          "image-name" : "birdblack.svg",
+          "name" : "birdblack",
+          "position" : {
+            "scale" : 0.7,
+            "translation-in-points" : [
+              -56.6640625,
+              3.8828125
+            ]
+          }
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    },
+    {
       "blur-material" : null,
       "layers" : [
         {
@@ -11,6 +46,7 @@
               "value" : "automatic"
             }
           ],
+          "hidden" : true,
           "image-name" : "owl.svg",
           "name" : "owl",
           "position" : {

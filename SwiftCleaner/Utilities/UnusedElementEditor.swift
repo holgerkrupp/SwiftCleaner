@@ -44,6 +44,8 @@ struct UnusedElementEditor {
         let appliedResult: CleanupActionResult
 
         switch action {
+        case .ignore:
+            return .zero
         case .commentOut:
             appliedResult = try commentOut(edits, in: &lines)
         case .addMarkComment:

@@ -162,6 +162,7 @@ struct ProjectAnalysisEngine {
             .filter(\.isUnused)
             .map(UnusedElement.init)
         let likelyUnusedFiles = buildLikelyUnusedFiles(
+            allSwiftFiles: swiftFiles,
             declarations: declarations,
             usages: usages,
             indexes: indexes
@@ -843,14 +844,15 @@ struct ProjectAnalysisEngine {
     }
 
     private func buildLikelyUnusedFiles(
+        allSwiftFiles: [URL],
         declarations: [ElementDeclaration],
         usages: [ElementUsage],
         indexes: AnalysisIndexes
     ) -> [LikelyUnusedFile] {
         let usageByID = Dictionary(uniqueKeysWithValues: usages.map { ($0.id, $0) })
         let topLevelDeclarationsByFile = Dictionary(grouping: declarations.filter(shouldTrackFileCandidate)) { $0.file }
-
-        return topLevelDeclarationsByFile.compactMap { fileURL, fileDeclarations in
+        var likelyUnusedFiles: [LikelyUnusedFile] = topLevelDeclarationsByFile.compactMap { entry in
+            let (fileURL, fileDeclarations) = entry
             let topLevelUsages = fileDeclarations.compactMap { usageByID[$0.id] }
             guard !topLevelUsages.isEmpty else { return nil }
             guard topLevelUsages.allSatisfy(\.isUnused) else { return nil }
@@ -873,6 +875,21 @@ struct ProjectAnalysisEngine {
                 reason: fileReason(for: sortedDeclarations, indexes: indexes)
             )
         }
+
+        let filesWithAnyDeclarations = Set(declarations.map { $0.file.standardizedFileURL })
+        let declarationFreeFiles = Set(allSwiftFiles.map(\.standardizedFileURL)).subtracting(filesWithAnyDeclarations)
+
+        for fileURL in declarationFreeFiles {
+            likelyUnusedFiles.append(LikelyUnusedFile(
+                id: fileURL.path,
+                file: fileURL,
+                line: 1,
+                primaryDeclarations: [],
+                reason: "This file contains no active declarations (for example, only comments, imports, or whitespace)."
+            ))
+        }
+
+        return likelyUnusedFiles
     }
 
     private func buildDiskOnlySwiftFiles(
@@ -906,6 +923,10 @@ struct ProjectAnalysisEngine {
             return .implicitlyUsed("Marked as an entry point.")
         }
 
+        if isSwiftPackageManifestDeclaration(declaration) {
+            return .implicitlyUsed("Marked as used because Swift Package Manager reads the manifest package declaration.")
+        }
+
         if declaration.isOverride {
             return .implicitlyUsed("Marked as used because it overrides a superclass member.")
         }
@@ -916,6 +937,23 @@ struct ProjectAnalysisEngine {
 
         if declaration.modifiers.contains("dynamic") {
             return .implicitlyUsed("Marked as used because it is dynamically dispatched.")
+        }
+
+        if declaration.type == .enumCase,
+           typeConformsTo(named: "CaseIterable", declaration.containingType, indexes: indexes) {
+            return .implicitlyUsed("Marked as used because CaseIterable synthesizes allCases from enum cases.")
+        }
+
+        if declaration.type == .property,
+           declaration.attributes.contains("Published"),
+           typeConformsTo(named: "ObservableObject", declaration.containingType, indexes: indexes) {
+            return .implicitlyUsed("Marked as used because @Published ObservableObject members are observed dynamically.")
+        }
+
+        if declaration.type == .property,
+           declaration.isFromExtension,
+           typeConformsTo(named: "NSManagedObject", declaration.containingType, indexes: indexes) {
+            return .implicitlyUsed("Marked as used because Core Data extension members are frequently resolved dynamically.")
         }
 
         if declaration.type == .method,
@@ -1056,6 +1094,13 @@ struct ProjectAnalysisEngine {
             declaration.qualifiedName,
             indexes: indexes
         )
+    }
+
+    private func isSwiftPackageManifestDeclaration(_ declaration: ElementDeclaration) -> Bool {
+        declaration.file.lastPathComponent == "Package.swift"
+            && declaration.containingType == nil
+            && declaration.type == .variable
+            && declaration.name == "package"
     }
 
     private func usageSort(lhs: ElementUsage, rhs: ElementUsage) -> Bool {

@@ -433,6 +433,16 @@ struct ProjectDetailsView: View {
             .disabled(analyzer.unusedElements.isEmpty || analyzer.isAnalyzing || analyzer.isApplyingEdit)
             .help("Apply cleanup action to all currently detected unused symbols.")
 
+            Button("Reset Ignored") {
+                Task {
+                    analyzer.clearIgnoredUnusedDeclarationsForCurrentProject()
+                    await analyzer.analyzeSelectedProject()
+                    editorStatusMessage = "Ignored declarations reset."
+                }
+            }
+            .disabled(analyzer.projectPath == nil || analyzer.isAnalyzing || analyzer.isApplyingEdit)
+            .help("Restore declarations previously hidden with Ignore and rerun analysis.")
+
             if let selectedUnusedFileCandidate {
                 Menu {
                     Button(role: .destructive) {

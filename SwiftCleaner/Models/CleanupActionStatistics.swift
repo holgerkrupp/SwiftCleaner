@@ -54,6 +54,8 @@ struct CleanupActionCounts: Codable, Equatable {
 
     mutating func record(_ action: UnusedItemAction, result: CleanupActionResult) {
         switch action {
+        case .ignore:
+            break
         case .commentOut:
             commentedOutItems += result.itemCount
             commentedOutLines += result.lineCount
